@@ -47,6 +47,37 @@ function App() {
     });
   };
 
+  const exportLog = () => {
+    const log = {
+      frequency,
+      scenarios: computedScenarios.map((cs, i) => ({
+        name: cs.name,
+        inputs: scenarios[i].config,
+        fhbss: cs.fhbssResult || null,
+        outputs: {
+          monthlyRepayment: cs.result.monthlyRepayment,
+          totalInterest: cs.result.totalInterest,
+          totalPaid: cs.result.totalPaid,
+          loanTermMonths: cs.result.schedule.length,
+        },
+        schedulePreview: {
+          first3: cs.result.schedule.slice(0, 3),
+          last3: cs.result.schedule.slice(-3),
+        },
+      })),
+      comparison: comparison.summary,
+      insights,
+    };
+
+    const text = JSON.stringify(log, null, 2);
+    console.log('=== LoanCalc Export ===\n', log);
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Log copied to clipboard. Paste into a text file or chat.');
+    }).catch(() => {
+      alert('Check browser console (F12) for the full log.');
+    });
+  };
+
   // Convert summary for selected frequency
   const frequencySummary = comparison.summary.map((s) => ({
     ...s,
@@ -60,7 +91,15 @@ function App() {
     <div className="min-h-screen bg-background text-foreground p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">LoanCalc</h1>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportLog}
+            className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent text-card-foreground text-sm font-medium transition-colors"
+          >
+            Export Log
+          </button>
+          <ThemeToggle />
+        </div>
       </div>
 
       <div className="grid grid-cols-[400px_1fr] gap-6">
