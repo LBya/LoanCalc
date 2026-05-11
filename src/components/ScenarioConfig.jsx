@@ -16,7 +16,7 @@ const defaultConfig = {
 
 export { defaultConfig };
 
-function ScenarioConfig({ scenario, isBaseline, onChange, fhbssResult }) {
+function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult }) {
   const config = scenario.config;
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showFhbss, setShowFhbss] = useState(config.fhbssAmount > 0);
