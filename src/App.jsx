@@ -23,11 +23,12 @@ function App() {
     }))
   );
 
-  const addScenario = () => {
+  const addScenario = (copyBaseline = false) => {
     if (scenarios.length >= 4) return;
+    const baseConfig = copyBaseline ? { ...scenarios[0].config } : { ...defaultConfig };
     setScenarios((prev) => [
       ...prev,
-      { name: scenarioNames[prev.length], config: { ...defaultConfig } },
+      { name: scenarioNames[prev.length], config: baseConfig },
     ]);
   };
 
@@ -53,7 +54,7 @@ function App() {
       scenarios: computedScenarios.map((cs, i) => ({
         name: cs.name,
         inputs: scenarios[i].config,
-        fhbss: cs.fhbssResult || null,
+        fhbss: cs.fhssResult || null,
         outputs: {
           monthlyRepayment: cs.result.monthlyRepayment,
           totalInterest: cs.result.totalInterest,
@@ -109,16 +110,24 @@ function App() {
               isBaseline={index === 0}
               onChange={(updated) => updateScenario(index, updated)}
               onRemove={() => removeScenario(index)}
-              fhbssResult={computedScenarios[index]?.fhbssResult}
+              fhssResult={computedScenarios[index]?.fhssResult}
             />
           ))}
           {scenarios.length < 4 && (
-            <button
-              onClick={addScenario}
-              className="w-full py-2 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-            >
-              + Add Scenario
-            </button>
+            <div className="flex border-2 border-dashed border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => addScenario(true)}
+                className="flex-1 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors border-r border-border"
+              >
+                Copy Baseline
+              </button>
+              <button
+                onClick={() => addScenario(false)}
+                className="flex-1 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                + Add Scenario
+              </button>
+            </div>
           )}
         </aside>
 

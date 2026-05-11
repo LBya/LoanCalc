@@ -1,14 +1,14 @@
 import { FHBSS } from './constants';
 
 /**
- * Calculate the net FHBSS withdrawal amount for a single lump sum in super.
+ * Calculate the net FHSS withdrawal amount for a single individual.
  * Worst-case tax assumptions.
  *
  * @param {Object} params
- * @param {number} params.amount - Total amount currently in super for FHBSS
+ * @param {number} params.amount - Total amount currently in super for FHSS
  * @returns {{ grossContribution: number, afterTaxContributions: number, deemedEarnings: number, taxPayable: number, netWithdrawal: number }}
  */
-export function calculateFHBSS({ amount }) {
+export function calculateFHSSIndividual({ amount }) {
   if (!amount || amount <= 0) {
     return {
       grossContribution: 0,
@@ -35,5 +35,24 @@ export function calculateFHBSS({ amount }) {
     deemedEarnings,
     taxPayable,
     netWithdrawal,
+  };
+}
+
+/**
+ * Calculate combined FHSS withdrawal for multiple individuals (e.g. a couple).
+ * Each individual is capped independently, then results are summed.
+ *
+ * @param {Object} params
+ * @param {number[]} params.individuals - Array of amounts per individual
+ * @returns {{ individuals: Array, combinedNetWithdrawal: number, combinedTaxPayable: number }}
+ */
+export function calculateFHSS({ individuals }) {
+  const results = individuals.map((amount) => calculateFHSSIndividual({ amount }));
+
+  return {
+    individuals: results,
+    combinedNetWithdrawal: results.reduce((sum, r) => sum + r.netWithdrawal, 0),
+    combinedTaxPayable: results.reduce((sum, r) => sum + r.taxPayable, 0),
+    combinedGrossContribution: results.reduce((sum, r) => sum + r.grossContribution, 0),
   };
 }

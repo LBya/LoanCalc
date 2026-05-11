@@ -85,18 +85,32 @@ describe('generateInsights', () => {
     expect(extraInsight).toContain('500');
   });
 
-  it('generates FHBSS insight', () => {
+  it('generates FHSS insight for single individual', () => {
     const summary = makeSummary([
-      { name: 'FHBSS', monthlyRepayment: 2800, totalInterest: 400000, totalPaid: 800000, loanTermMonths: 280, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 80 },
+      { name: 'FHSS', monthlyRepayment: 2800, totalInterest: 400000, totalPaid: 800000, loanTermMonths: 280, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 80 },
     ]);
     const result = generateInsights(summary, [
       { name: 'Baseline', config: {} },
-      { name: 'FHBSS', config: { fhbssContributions: [15000, 15000] } },
+      { name: 'FHSS', config: { fhssIndividuals: [30000] } },
     ]);
 
-    const fhbssInsight = result.find(r => r.includes('FHBSS contributions'));
-    expect(fhbssInsight).toBeDefined();
-    expect(fhbssInsight).toContain('30,000');
+    const fhssInsight = result.find(r => r.includes('contributions'));
+    expect(fhssInsight).toBeDefined();
+    expect(fhssInsight).toContain('30,000');
+  });
+
+  it('generates FHSS insight for couple', () => {
+    const summary = makeSummary([
+      { name: 'FHSS', monthlyRepayment: 2800, totalInterest: 400000, totalPaid: 800000, loanTermMonths: 280, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 80 },
+    ]);
+    const result = generateInsights(summary, [
+      { name: 'Baseline', config: {} },
+      { name: 'FHSS', config: { fhssIndividuals: [15000, 15000] } },
+    ]);
+
+    const fhssInsight = result.find(r => r.includes("individuals' FHSS"));
+    expect(fhssInsight).toBeDefined();
+    expect(fhssInsight).toContain('30,000');
   });
 
   it('no insights for identical scenarios', () => {

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { generateAmortization } from '../engine/amortization';
 import { applyOffset } from '../engine/offset';
 import { applyExtraRepayments } from '../engine/extraRepayments';
-import { calculateFHBSS } from '../engine/fhbss';
+import { calculateFHSS } from '../engine/fhbss';
 import { buildComparison } from '../engine/comparison';
 import { generateInsights } from '../engine/insights';
 
@@ -11,16 +11,17 @@ export function useCalculator(scenarios) {
     const computedScenarios = scenarios.map((scenario) => {
       const config = scenario.config;
 
-      // 1. Calculate FHBSS net deposit boost (single amount)
-      let fhbssResult = null;
-      if (config.fhbssAmount > 0) {
-        fhbssResult = calculateFHBSS({ amount: config.fhbssAmount });
+      // 1. Calculate FHSS net deposit boost (per individual)
+      let fhssResult = null;
+      const fhssIndividuals = config.fhssIndividuals || [];
+      if (fhssIndividuals.some((a) => a > 0)) {
+        fhssResult = calculateFHSS({ individuals: fhssIndividuals });
       }
 
-      // 2. Adjust principal for deposit + FHBSS
+      // 2. Adjust principal for deposit + FHSS
       const principal = config.propertyPrice
         - config.deposit
-        - (fhbssResult?.netWithdrawal ?? 0);
+        - (fhssResult?.combinedNetWithdrawal ?? 0);
 
       // 3. Generate base amortization
       const base = generateAmortization({
@@ -54,7 +55,7 @@ export function useCalculator(scenarios) {
         });
       }
 
-      return { name: scenario.name, config, fhbssResult, result };
+      return { name: scenario.name, config, fhssResult, result };
     });
 
     const comparison = buildComparison(

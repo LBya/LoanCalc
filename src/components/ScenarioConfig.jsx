@@ -9,16 +9,16 @@ const defaultConfig = {
   offsetMonthlyGrowth: 0,
   offsetAnnualGrowth: 0,
   extraMonthly: 0,
-  fhbssAmount: 0,
+  fhssIndividuals: [0],
   repaymentFrequency: 'monthly',
 };
 
 export { defaultConfig };
 
-function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult }) {
+function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult }) {
   const config = scenario.config;
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showFhbss, setShowFhbss] = useState(config.fhbssAmount > 0);
+  const [showFhss, setShowFhss] = useState((config.fhssIndividuals || []).some((a) => a > 0));
 
   const update = (field, value) => {
     onChange({ ...scenario, config: { ...config, [field]: value } });
@@ -29,8 +29,26 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
   const inputClass = "block w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent";
   const labelClass = "text-sm font-medium text-muted-foreground";
 
-  const fhbssNet = fhbssResult?.netWithdrawal ?? 0;
-  const effectiveDeposit = config.deposit + fhbssNet;
+  const combinedNet = fhssResult?.combinedNetWithdrawal ?? 0;
+  const effectiveDeposit = config.deposit + combinedNet;
+
+  const individuals = config.fhssIndividuals || [0];
+
+  const addIndividual = () => {
+    update('fhssIndividuals', [...individuals, 0]);
+  };
+
+  const removeIndividual = (index) => {
+    const updated = [...individuals];
+    updated.splice(index, 1);
+    update('fhssIndividuals', updated);
+  };
+
+  const updateIndividual = (index, value) => {
+    const updated = [...individuals];
+    updated[index] = parseNum(value);
+    update('fhssIndividuals', updated);
+  };
 
   return (
     <div className="border border-border rounded-lg p-4 bg-card shadow-sm">
@@ -79,41 +97,73 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
             className={inputClass}
           />
 
-          {/* FHBSS sub-section under deposit */}
+          {/* FHSS sub-section under deposit */}
           <div className="mt-2">
             <button
-              onClick={() => { setShowFhbss(!showFhbss); if (showFhbss && config.fhbssAmount === 0) return; }}
+              onClick={() => { setShowFhss(!showFhss); }}
               className="text-sm text-primary hover:underline"
             >
-              {showFhbss ? 'Hide' : 'Add'} FHBSS Super Saver
+              {showFhss ? 'Hide' : 'Add'} FHSS Super Saver
             </button>
 
-            {showFhbss && (
+            {showFhss && (
               <div className="mt-2 p-3 bg-muted rounded-md space-y-2">
-                <label className="block">
-                  <span className={labelClass}>Amount in Super ($)</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={config.fhbssAmount}
-                    onChange={(e) => update('fhbssAmount', parseNum(e.target.value))}
-                    className={inputClass}
-                  />
-                </label>
-                {config.fhbssAmount > 0 && fhbssResult && (
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Tax on withdrawal: <span className="text-foreground font-medium">${Math.round(fhbssResult.taxPayable).toLocaleString()}</span></p>
-                    <p>Net amount for deposit: <span className="text-primary font-medium">${Math.round(fhbssNet).toLocaleString()}</span></p>
+                <span className={labelClass}>Amount in Super (per individual)</span>
+                {individuals.map((amount, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <span className="text-xs text-muted-foreground w-6 shrink-0">
+                      {individuals.length > 1 ? `P${i + 1}` : ''}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Amount"
+                      value={amount}
+                      onChange={(e) => updateIndividual(i, e.target.value)}
+                      className={inputClass}
+                    />
+                    {individuals.length > 1 && (
+                      <button
+                        onClick={() => removeIndividual(i)}
+                        className="text-destructive hover:text-destructive/80 text-sm shrink-0"
+                      >
+                        X
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {individuals.length < 2 && (
+                  <button onClick={addIndividual} className="text-sm text-primary hover:underline">
+                    + Add individual (couple)
+                  </button>
+                )}
+
+                {fhssResult && individuals.some((a) => a > 0) && (
+                  <div className="text-sm text-muted-foreground space-y-1 pt-1">
+                    {fhssResult.individuals.map((r, i) => (
+                      r.netWithdrawal > 0 && (
+                        <p key={i}>
+                          {individuals.length > 1 ? `P${i + 1}: ` : ''}
+                          Net: <span className="text-primary font-medium">${Math.round(r.netWithdrawal).toLocaleString()}</span>
+                          {individuals.length > 1 && <span> (tax: ${Math.round(r.taxPayable).toLocaleString()})</span>}
+                        </p>
+                      )
+                    ))}
+                    {individuals.length > 1 && combinedNet > 0 && (
+                      <p className="border-t border-border pt-1 mt-1">
+                        Combined net: <span className="text-primary font-semibold">${Math.round(combinedNet).toLocaleString()}</span>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {(fhbssNet > 0) && (
+          {combinedNet > 0 && (
             <p className="text-sm text-muted-foreground mt-2">
               Total deposit: <span className="text-card-foreground font-semibold">${Math.round(effectiveDeposit).toLocaleString()}</span>
-              <span className="text-muted-foreground"> (cash + FHBSS)</span>
+              <span className="text-muted-foreground"> (cash + FHSS)</span>
             </p>
           )}
         </div>

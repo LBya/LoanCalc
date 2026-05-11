@@ -65,11 +65,13 @@ export function generateInsights(summary, scenarioConfigs) {
       );
     }
 
-    // Rule 6: FHBSS-specific
-    if (config?.fhbssContributions?.length > 0) {
-      const total = config.fhbssContributions.reduce((sum, c) => sum + c, 0);
+    // Rule 6: FHSS-specific
+    if (config?.fhssIndividuals?.length > 0 && config.fhssIndividuals.some((a) => a > 0)) {
+      const count = config.fhssIndividuals.filter((a) => a > 0).length;
+      const total = config.fhssIndividuals.reduce((sum, a) => sum + a, 0);
+      const label = count > 1 ? `${count} individuals' FHSS` : 'FHSS';
       insights.push(
-        `FHBSS contributions in ${s.name} total ${formatMoney(total)}, reducing the loan principal.`
+        `${label} contributions in ${s.name} total ${formatMoney(total)}, reducing the loan principal.`
       );
     }
   }
