@@ -70,11 +70,9 @@ function App() {
     };
 
     const text = JSON.stringify(log, null, 2);
-    console.log('=== LoanCalc Export ===\n', log);
-    navigator.clipboard.writeText(text).then(() => {
-      alert('Log copied to clipboard. Paste into a text file or chat.');
-    }).catch(() => {
-      alert('Check browser console (F12) for the full log.');
+    navigator.clipboard.writeText(text).catch(() => {
+      // Clipboard API unavailable — log to console as fallback
+      console.log('LoanCalc Export (clipboard unavailable):\n', text);
     });
   };
 

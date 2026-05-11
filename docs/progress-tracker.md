@@ -121,7 +121,7 @@
 | 4.5 | PRD Req #6: Side-by-side 3-4 scenarios | [x] | Table tested with 1-4 columns | |
 | 4.5 | PRD Req #7: Interactive graph | [x] | Recharts renders lines for each scenario | Tooltip, legend, axes working |
 | 4.5 | PRD Req #8: Dynamic text insights | [x] | 4 insights generated for offset scenario | |
-| 4.6 | Final code cleanup | [x] | No console.log, no unused imports | Grep verified |
+| 4.6 | Final code cleanup | [x] | No console.log in hot path; clipboard fallback only | Grep verified; exportLog fallback uses console in catch only |
 | 4.6 | Final test suite run | [x] | `npm test` — 39/39 pass | |
 | 4.6 | Documentation accuracy check | [x] | design.md matches implementation | |
 

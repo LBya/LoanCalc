@@ -3,8 +3,7 @@ dist
 .DS_Store
 *.local
 
-### exampples and logs
-export_log
+### examples and logs
+export_log/
 
-docs/*.md
 .venv

@@ -36,36 +36,26 @@ function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onTo
   // Map offset trajectory index to its parent scenario index for visibility
   const offsetCount = offsetTrajectories?.length || 0;
 
-  // Build explicit tick arrays for dual x-axis
+  // Build tick array with year-aware labels
   const maxMonth = data.length;
   const yearTicks = [];
   for (let m = 12; m < maxMonth; m += 12) yearTicks.push(m);
+  if (yearTicks.length === 0 && maxMonth > 0) yearTicks.push(maxMonth);
 
   return (
     <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
       <h2 className="text-lg font-semibold mb-4 text-card-foreground">Balance Trajectory</h2>
-      <ResponsiveContainer width="100%" height={420}>
-        <LineChart data={data} margin={{ bottom: 30 }}>
+      <ResponsiveContainer width="100%" height={400}>
+        <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          {/* Month axis (top) - ticks every 12 months, showing month number within year */}
           <XAxis
             dataKey="month"
             stroke="var(--muted-foreground)"
             ticks={yearTicks}
-            tickFormatter={(month) => month}
-            tick={{ fontSize: 11 }}
-          />
-          {/* Year axis (bottom) - ticks at same positions, showing year label */}
-          <XAxis
-            dataKey="month"
-            xAxisId="years"
-            orientation="bottom"
-            stroke="var(--muted-foreground)"
-            ticks={yearTicks}
-            tickFormatter={(month) => `${month / 12}yr`}
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
+            tickFormatter={(month) => {
+              const years = month / 12;
+              return Number.isInteger(years) ? `${years}yr` : month;
+            }}
             label={{ value: 'Months / Years', position: 'insideBottom', offset: -5, fill: 'var(--muted-foreground)' }}
           />
           <YAxis
