@@ -26,7 +26,7 @@ const formatMonthsSaved = (months) => {
 };
 
 const metrics = [
-  { label: 'Monthly Payment', key: 'monthlyRepayment', format: formatMoney },
+  { label: 'Repayment', key: 'repayment', format: formatMoney },
   { label: 'Total Interest', key: 'totalInterest', format: formatMoney },
   { label: 'Total Paid', key: 'totalPaid', format: formatMoney },
   { label: 'Loan Term', key: 'loanTermMonths', format: formatTerm },
@@ -34,33 +34,34 @@ const metrics = [
   { label: 'Time Saved', key: 'monthsSavedVsBaseline', format: formatMonthsSaved },
 ];
 
-function ComparisonTable({ summary }) {
+function ComparisonTable({ summary, frequency }) {
   if (!summary || summary.length === 0) return null;
 
+  const repaymentLabel = summary[0]?.repaymentLabel || 'Monthly';
+
   return (
-    <div className="bg-white rounded-lg border p-4 overflow-x-auto">
-      <h2 className="text-lg font-semibold mb-3">Comparison</h2>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b-2 border-gray-300">
-            <th className="text-left py-2 px-3 font-medium">Metric</th>
+    <table className="w-full border-collapse text-sm">
+      <thead>
+        <tr className="border-b-2 border-border">
+          <th className="text-left py-2 px-3 font-medium text-muted-foreground">Metric</th>
+          {summary.map((s) => (
+            <th key={s.name} className="text-right py-2 px-3 font-medium text-card-foreground">{s.name}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {metrics.map(({ label, key, format }, index) => (
+          <tr key={key} className={index % 2 === 0 ? 'bg-muted' : ''}>
+            <td className="py-2 px-3 font-medium text-card-foreground">
+              {key === 'repayment' ? `${repaymentLabel} Repayment` : label}
+            </td>
             {summary.map((s) => (
-              <th key={s.name} className="text-right py-2 px-3 font-medium">{s.name}</th>
+              <td key={s.name} className="text-right py-2 px-3 tabular-nums text-card-foreground">{format(s[key])}</td>
             ))}
           </tr>
-        </thead>
-        <tbody>
-          {metrics.map(({ label, key, format }, index) => (
-            <tr key={key} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-              <td className="py-2 px-3 font-medium">{label}</td>
-              {summary.map((s) => (
-                <td key={s.name} className="text-right py-2 px-3 tabular-nums">{format(s[key])}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

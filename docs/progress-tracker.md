@@ -105,24 +105,25 @@
 
 | # | Task | Status | Verification | Notes |
 |---|------|--------|-------------|-------|
-| 4.1 | Initialize Git repository | [ ] | `git log` shows initial commit | |
-| 4.1 | Verify `.gitignore` | [ ] | `node_modules/` and `dist/` excluded | |
-| 4.2 | Create `render.yaml` | [ ] | YAML valid, settings correct | |
-| 4.3 | Test production build locally | [ ] | `npm run preview` works | |
-| 4.3 | Check DevTools for errors | [ ] | No console errors in production build | |
-| 4.4 | Deploy to Render | [ ] | App accessible at Render URL | |
+| 4.1 | Initialize Git repository | [x] | `git log` shows initial commit | 36 files, 7870 insertions |
+| 4.1 | Verify `.gitignore` | [x] | `node_modules/` and `dist/` excluded | |
+| 4.2 | Create `render.yaml` | [x] | YAML valid, settings correct | Static site with cache headers |
+| 4.3 | Test production build locally | [x] | `npm run preview` works | 523KB JS + 11KB CSS |
+| 4.3 | Check DevTools for errors | [x] | No console errors in production build | Only favicon 404 (expected) |
+| 4.4 | Push to GitHub | [x] | https://github.com/LBya/LoanCalc | Public repo, master branch |
+| 4.4 | Deploy to Render | [ ] | App accessible at Render URL | Awaiting manual Render setup |
 | 4.4 | Verify deployed app | [ ] | All features work on deployed version | |
-| 4.5 | PRD Req #1: Base repayment verified | [ ] | Matches external calculator | Source: ___________ |
-| 4.5 | PRD Req #2: Adjustable term works | [ ] | Changing term updates schedule | |
-| 4.5 | PRD Req #3: FHBSS worst-case tax | [ ] | Tax applied correctly, principal reduced | |
-| 4.5 | PRD Req #4: Offset reduces interest | [ ] | Lower interest, shorter lifecycle | |
-| 4.5 | PRD Req #5: Extra repayments work | [ ] | Earlier payoff, updated schedule | |
-| 4.5 | PRD Req #6: Side-by-side 3-4 scenarios | [ ] | Table supports 4 columns | |
-| 4.5 | PRD Req #7: Interactive graph | [ ] | All scenario trajectories plotted | |
-| 4.5 | PRD Req #8: Dynamic text insights | [ ] | Accurate cost/timeframe differences | |
-| 4.6 | Final code cleanup | [ ] | No console.log, no unused imports | |
-| 4.6 | Final test suite run | [ ] | `npm test` — all pass | |
-| 4.6 | Documentation accuracy check | [ ] | design.md matches implementation | |
+| 4.5 | PRD Req #1: Base repayment verified | [x] | $3,160.34/mo matches ASIC Moneysmart | Source: ASIC Moneysmart |
+| 4.5 | PRD Req #2: Adjustable term works | [x] | 30yr→25yr updates schedule correctly | |
+| 4.5 | PRD Req #3: FHBSS worst-case tax | [x] | 15% effective tax, per-year/total caps enforced | |
+| 4.5 | PRD Req #4: Offset reduces interest | [x] | $50k offset: interest -$287k, term -9yr | |
+| 4.5 | PRD Req #5: Extra repayments work | [x] | Extra $500/mo shortens term, reduces interest | |
+| 4.5 | PRD Req #6: Side-by-side 3-4 scenarios | [x] | Table tested with 1-4 columns | |
+| 4.5 | PRD Req #7: Interactive graph | [x] | Recharts renders lines for each scenario | Tooltip, legend, axes working |
+| 4.5 | PRD Req #8: Dynamic text insights | [x] | 4 insights generated for offset scenario | |
+| 4.6 | Final code cleanup | [x] | No console.log, no unused imports | Grep verified |
+| 4.6 | Final test suite run | [x] | `npm test` — 39/39 pass | |
+| 4.6 | Documentation accuracy check | [x] | design.md matches implementation | |
 
 **Phase 4 Gate:** [ ] All tasks done → **MVP COMPLETE**
 
@@ -136,7 +137,10 @@
 | 2026-05-11 | Desktop-only (mobile is non-goal) | Approved by user |
 | 2026-05-11 | Text insights: deterministic + conditional logic | Approved by user |
 | 2026-05-11 | Include Render deployment in plan | Approved by user |
-| | | |
+| 2026-05-11 | Switched from CSS Modules to Tailwind CSS | Approved by user |
+| 2026-05-11 | FHBSS test: netWithdrawal < afterTaxContributions is correct | Withdrawal tax (15%) applies to after-tax + earnings |
+| 2026-05-11 | Offset = principal: loan pays off in ~159mo not 1mo | Full repayment still required, just zero interest |
+| 2026-05-11 | Deployed to GitHub: https://github.com/LBya/LoanCalc | Render setup pending manual steps |
 
 ---
 

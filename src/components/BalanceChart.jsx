@@ -1,6 +1,10 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ca8a04'];
+function getChartColor(index) {
+  const colors = ['chart-1', 'chart-2', 'chart-3', 'chart-4'];
+  const varName = colors[index % colors.length];
+  return `var(--${varName})`;
+}
 
 function mergeTrajectories(trajectories) {
   const maxMonths = Math.max(...trajectories.map(t => t.data.length));
@@ -17,48 +21,102 @@ function mergeTrajectories(trajectories) {
   return merged;
 }
 
-function BalanceChart({ trajectories }) {
+function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onToggleScenario }) {
   if (!trajectories || trajectories.length === 0) return null;
 
-  const data = mergeTrajectories(trajectories);
+  // Merge balance trajectories + offset trajectories
+  const allTrajectories = [...trajectories, ...(offsetTrajectories || [])];
+  const data = mergeTrajectories(allTrajectories);
 
   const formatYAxis = (value) => {
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
     return `$${value}`;
   };
 
+  // Map offset trajectory index to its parent scenario index for visibility
+  const offsetCount = offsetTrajectories?.length || 0;
+
   return (
-    <div className="bg-white rounded-lg border p-4">
-      <h2 className="text-lg font-semibold mb-4">Balance Trajectory</h2>
+    <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
+      <h2 className="text-lg font-semibold mb-4 text-card-foreground">Balance Trajectory</h2>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis
             dataKey="month"
-            label={{ value: 'Months', position: 'insideBottom', offset: -5 }}
+            stroke="var(--muted-foreground)"
+            label={{ value: 'Months', position: 'insideBottom', offset: -5, fill: 'var(--muted-foreground)' }}
           />
           <YAxis
             tickFormatter={formatYAxis}
-            label={{ value: 'Balance', angle: -90, position: 'insideLeft' }}
+            stroke="var(--muted-foreground)"
+            label={{ value: 'Balance', angle: -90, position: 'insideLeft', fill: 'var(--muted-foreground)' }}
           />
           <Tooltip
             formatter={(value) => value !== null ? `$${Math.round(value).toLocaleString()}` : 'Paid off'}
             labelFormatter={(month) => `Month ${month}`}
+            contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
           />
           <Legend />
+          {/* Balance lines */}
           {trajectories.map((t, index) => (
             <Line
               key={t.name}
               type="monotone"
               dataKey={t.name}
-              stroke={COLORS[index]}
+              stroke={getChartColor(index)}
               strokeWidth={2}
               dot={false}
               connectNulls={false}
+              hide={visibleScenarios && !visibleScenarios[index]}
             />
           ))}
+          {/* Offset lines (dashed) */}
+          {(offsetTrajectories || []).map((t, index) => {
+            // Find parent scenario index for visibility
+            const parentIndex = trajectories.findIndex(
+              (bt) => t.name === `${bt.name} Offset`
+            );
+            return (
+              <Line
+                key={t.name}
+                type="monotone"
+                dataKey={t.name}
+                stroke={getChartColor(parentIndex >= 0 ? parentIndex : index)}
+                strokeWidth={1.5}
+                strokeDasharray="5 5"
+                dot={false}
+                connectNulls={false}
+                hide={visibleScenarios && parentIndex >= 0 && !visibleScenarios[parentIndex]}
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
+      {onToggleScenario && (
+        <div className="flex flex-wrap gap-2 mt-3 border-t border-border pt-3">
+          {trajectories.map((t, index) => {
+            const visible = visibleScenarios ? visibleScenarios[index] : true;
+            return (
+              <button
+                key={t.name}
+                onClick={() => onToggleScenario(index)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border transition-colors ${
+                  visible
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-muted text-muted-foreground'
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: getChartColor(index), opacity: visible ? 1 : 0.4 }}
+                />
+                {t.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

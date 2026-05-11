@@ -4,24 +4,17 @@ import { applyOffset } from '../engine/offset';
 import { applyExtraRepayments } from '../engine/extraRepayments';
 import { calculateFHBSS } from '../engine/fhbss';
 import { buildComparison } from '../engine/comparison';
-
 import { generateInsights } from '../engine/insights';
 
-/**
- * Orchestrates the engine pipeline for all scenarios.
- *
- * @param {Array<{name: string, config: object}>} scenarios
- * @returns {{ computedScenarios: Array, comparison: object, insights: Array<string> }}
- */
 export function useCalculator(scenarios) {
   return useMemo(() => {
     const computedScenarios = scenarios.map((scenario) => {
       const config = scenario.config;
 
-      // 1. Calculate FHBSS net deposit boost
+      // 1. Calculate FHBSS net deposit boost (single amount)
       let fhbssResult = null;
-      if (config.fhbssContributions?.length > 0) {
-        fhbssResult = calculateFHBSS({ yearlyContributions: config.fhbssContributions });
+      if (config.fhbssAmount > 0) {
+        fhbssResult = calculateFHBSS({ amount: config.fhbssAmount });
       }
 
       // 2. Adjust principal for deposit + FHBSS
@@ -31,27 +24,29 @@ export function useCalculator(scenarios) {
 
       // 3. Generate base amortization
       const base = generateAmortization({
-        principal,
+        principal: Math.max(0, principal),
         annualRate: config.annualRate,
         termYears: config.termYears,
       });
 
-      // 4. Apply offset
+      // 4. Apply offset (with growth)
       let result = base;
-      if (config.offsetBalance > 0) {
+      if (config.offsetBalance > 0 || config.offsetMonthlyGrowth > 0) {
         result = applyOffset({
-          principal,
+          principal: Math.max(0, principal),
           annualRate: config.annualRate,
           termYears: config.termYears,
           offsetBalance: config.offsetBalance,
           monthlyRepayment: base.monthlyRepayment,
+          offsetMonthlyGrowth: config.offsetMonthlyGrowth || 0,
+          offsetAnnualGrowth: config.offsetAnnualGrowth || 0,
         });
       }
 
       // 5. Apply extra repayments
       if (config.extraMonthly > 0 || config.lumpSums?.length > 0) {
         result = applyExtraRepayments({
-          principal,
+          principal: Math.max(0, principal),
           annualRate: config.annualRate,
           monthlyRepayment: base.monthlyRepayment,
           extraMonthly: config.extraMonthly || 0,

@@ -75,3 +75,37 @@ export function generateAmortization({ principal, annualRate, termYears }) {
     schedule,
   };
 }
+
+/**
+ * Convert a monthly repayment to a different frequency.
+ * The amortization schedule is always monthly internally.
+ *
+ * @param {number} monthlyRepayment
+ * @param {'monthly'|'fortnightly'|'weekly'} frequency
+ * @returns {number} Repayment amount for the given frequency
+ */
+export function convertRepayment(monthlyRepayment, frequency) {
+  switch (frequency) {
+    case 'weekly':
+      return monthlyRepayment * 12 / 52;
+    case 'fortnightly':
+      return monthlyRepayment * 12 / 26;
+    case 'monthly':
+    default:
+      return monthlyRepayment;
+  }
+}
+
+/**
+ * Get the label for a repayment frequency.
+ * @param {'monthly'|'fortnightly'|'weekly'} frequency
+ * @returns {string}
+ */
+export function frequencyLabel(frequency) {
+  switch (frequency) {
+    case 'weekly': return 'Weekly';
+    case 'fortnightly': return 'Fortnightly';
+    case 'monthly': return 'Monthly';
+    default: return 'Monthly';
+  }
+}

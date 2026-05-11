@@ -3,19 +3,20 @@ import ScenarioConfig, { defaultConfig } from './components/ScenarioConfig';
 import ComparisonTable from './components/ComparisonTable';
 import BalanceChart from './components/BalanceChart';
 import TextInsights from './components/TextInsights';
+import ThemeToggle from './components/ThemeToggle';
 import { useCalculator } from './hooks/useCalculator';
+import { convertRepayment, frequencyLabel } from './engine/amortization';
 
 const scenarioNames = ['Baseline', 'Scenario A', 'Scenario B', 'Scenario C'];
 
 function App() {
   const [scenarios, setScenarios] = useState([
-    {
-      name: 'Baseline',
-      config: { ...defaultConfig },
-    },
+    { name: 'Baseline', config: { ...defaultConfig } },
   ]);
+  const [frequency, setFrequency] = useState('monthly');
+  const [visibleScenarios, setVisibleScenarios] = useState([true, true, true, true]);
 
-  const { comparison, insights } = useCalculator(
+  const { computedScenarios, comparison, insights } = useCalculator(
     scenarios.map((s) => ({
       ...s,
       config: { ...s.config, annualRate: s.config.annualRate / 100 },
@@ -38,12 +39,32 @@ function App() {
     setScenarios((prev) => prev.map((s, i) => (i === index ? updated : s)));
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <h1 className="text-2xl font-bold mb-6">LoanCalc - Home Loan Scenario Comparison</h1>
+  const toggleScenarioVisibility = (index) => {
+    setVisibleScenarios((prev) => {
+      const next = [...prev];
+      next[index] = !next[index];
+      return next;
+    });
+  };
 
-      <div className="grid grid-cols-[384px_1fr] gap-6">
-        <aside className="space-y-4 max-h-screen overflow-y-auto">
+  // Convert summary for selected frequency
+  const frequencySummary = comparison.summary.map((s) => ({
+    ...s,
+    repayment: convertRepayment(s.monthlyRepayment, frequency),
+    repaymentLabel: frequencyLabel(frequency),
+  }));
+
+  const frequencies = ['monthly', 'fortnightly', 'weekly'];
+
+  return (
+    <div className="min-h-screen bg-background text-foreground p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-foreground">LoanCalc</h1>
+        <ThemeToggle />
+      </div>
+
+      <div className="grid grid-cols-[400px_1fr] gap-6">
+        <aside className="space-y-4 max-h-screen overflow-y-auto pr-2">
           {scenarios.map((scenario, index) => (
             <ScenarioConfig
               key={index}
@@ -51,12 +72,13 @@ function App() {
               isBaseline={index === 0}
               onChange={(updated) => updateScenario(index, updated)}
               onRemove={() => removeScenario(index)}
+              fhbssResult={computedScenarios[index]?.fhbssResult}
             />
           ))}
           {scenarios.length < 4 && (
             <button
               onClick={addScenario}
-              className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500"
+              className="w-full py-2 border-2 border-dashed border-border rounded-lg text-muted-foreground hover:border-primary hover:text-primary transition-colors"
             >
               + Add Scenario
             </button>
@@ -64,8 +86,32 @@ function App() {
         </aside>
 
         <main className="flex flex-col gap-6">
-          <ComparisonTable summary={comparison.summary} />
-          <BalanceChart trajectories={comparison.trajectories} />
+          {/* Frequency tabs */}
+          <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
+            <div className="flex items-center gap-1 mb-4 border-b border-border">
+              {frequencies.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFrequency(f)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    frequency === f
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-card-foreground'
+                  }`}
+                >
+                  {frequencyLabel(f)}
+                </button>
+              ))}
+            </div>
+            <ComparisonTable summary={frequencySummary} frequency={frequency} />
+          </div>
+
+          <BalanceChart
+            trajectories={comparison.trajectories}
+            offsetTrajectories={comparison.offsetTrajectories}
+            visibleScenarios={visibleScenarios}
+            onToggleScenario={toggleScenarioVisibility}
+          />
           <TextInsights insights={insights} />
         </main>
       </div>

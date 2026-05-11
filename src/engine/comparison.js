@@ -2,11 +2,11 @@
  * Aggregate multiple scenario results into comparison data.
  *
  * @param {Array<{name: string, result: {monthlyRepayment: number, totalInterest: number, totalPaid: number, schedule: Array}}>} scenarios
- * @returns {{ summary: Array, trajectories: Array }}
+ * @returns {{ summary: Array, trajectories: Array, offsetTrajectories: Array }}
  */
 export function buildComparison(scenarios) {
   if (!scenarios || scenarios.length === 0) {
-    return { summary: [], trajectories: [] };
+    return { summary: [], trajectories: [], offsetTrajectories: [] };
   }
 
   const baseline = scenarios[0];
@@ -29,5 +29,18 @@ export function buildComparison(scenarios) {
     })),
   }));
 
-  return { summary, trajectories };
+  // Offset trajectories for scenarios that have offset data
+  const offsetTrajectories = scenarios
+    .filter((scenario) => scenario.result.schedule.some((entry) => entry.offsetBalance > 0))
+    .map((scenario) => ({
+      name: `${scenario.name} Offset`,
+      data: scenario.result.schedule
+        .filter((entry) => entry.offsetBalance > 0)
+        .map((entry) => ({
+          month: entry.month,
+          balance: entry.offsetBalance,
+        })),
+    }));
+
+  return { summary, trajectories, offsetTrajectories };
 }

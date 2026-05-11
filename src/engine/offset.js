@@ -1,27 +1,37 @@
 /**
  * Recalculate amortization schedule with an offset balance.
- *
- * An offset account reduces the interest-bearing balance each month.
- * The contractual repayment stays the same, but more goes to principal,
- * so the loan pays off sooner.
+ * Supports static offset or growing offset (fixed monthly + annual percentage).
  *
  * @param {Object} params
  * @param {number} params.principal - Original loan principal
  * @param {number} params.annualRate - Annual interest rate as decimal
  * @param {number} params.termYears - Original loan term in years
- * @param {number} params.offsetBalance - Amount held in offset account
+ * @param {number} params.offsetBalance - Initial amount in offset account
  * @param {number} params.monthlyRepayment - Contractual monthly repayment from base amortization
- * @returns {{ monthlyRepayment: number, totalInterest: number, totalPaid: number, schedule: Array<{month: number, payment: number, principal: number, interest: number, balance: number}> }}
+ * @param {number} params.offsetMonthlyGrowth - Fixed amount added to offset each month (default 0)
+ * @param {number} params.offsetAnnualGrowth - Annual percentage growth on offset (default 0, e.g. 5 = 5%)
+ * @returns {{ monthlyRepayment: number, totalInterest: number, totalPaid: number, schedule: Array<{month: number, payment: number, principal: number, interest: number, balance: number, offsetBalance: number}> }}
  */
-export function applyOffset({ principal, annualRate, termYears, offsetBalance, monthlyRepayment }) {
+export function applyOffset({ principal, annualRate, termYears, offsetBalance, monthlyRepayment, offsetMonthlyGrowth = 0, offsetAnnualGrowth = 0 }) {
   const r = annualRate / 12;
   const schedule = [];
   let balance = principal;
+  let currentOffset = offsetBalance;
   let month = 0;
 
   while (balance > 0) {
     month += 1;
-    const effectiveBalance = Math.max(0, balance - offsetBalance);
+
+    // Grow offset
+    currentOffset += offsetMonthlyGrowth;
+    // Annual growth applied every 12 months
+    if (offsetAnnualGrowth > 0 && month > 1 && (month - 1) % 12 === 0) {
+      currentOffset *= (1 + offsetAnnualGrowth / 100);
+    }
+    // Cap offset at remaining principal
+    currentOffset = Math.min(currentOffset, balance + currentOffset);
+
+    const effectiveBalance = Math.max(0, balance - currentOffset);
     const interestPayment = effectiveBalance * r;
     let principalPayment = monthlyRepayment - interestPayment;
     let payment = monthlyRepayment;
@@ -40,9 +50,9 @@ export function applyOffset({ principal, annualRate, termYears, offsetBalance, m
       principal: principalPayment,
       interest: interestPayment,
       balance,
+      offsetBalance: currentOffset,
     });
 
-    // Safety: shouldn't exceed original term by much
     if (month > termYears * 12 + 1) break;
   }
 
