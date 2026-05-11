@@ -9,7 +9,6 @@ const defaultConfig = {
   offsetMonthlyGrowth: 0,
   offsetAnnualGrowth: 0,
   extraMonthly: 0,
-  lumpSums: [],
   fhbssAmount: 0,
   repaymentFrequency: 'monthly',
 };
@@ -25,21 +24,7 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
     onChange({ ...scenario, config: { ...config, [field]: value } });
   };
 
-  const addLumpSum = () => {
-    update('lumpSums', [...(config.lumpSums || []), { month: 12, amount: 0 }]);
-  };
-
-  const removeLumpSum = (index) => {
-    const updated = [...config.lumpSums];
-    updated.splice(index, 1);
-    update('lumpSums', updated);
-  };
-
-  const updateLumpSum = (index, field, value) => {
-    const updated = [...config.lumpSums];
-    updated[index] = { ...updated[index], [field]: Number(value) };
-    update('lumpSums', updated);
-  };
+  const parseNum = (value) => value === '' ? '' : Number(value);
 
   const inputClass = "block w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent";
   const labelClass = "text-sm font-medium text-muted-foreground";
@@ -67,22 +52,32 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
           <span className={labelClass}>Property Price ($)</span>
           <input
             type="number"
+            min="0"
             value={config.propertyPrice}
-            onChange={(e) => update('propertyPrice', Number(e.target.value))}
+            onChange={(e) => update('propertyPrice', parseNum(e.target.value))}
             className={inputClass}
           />
         </label>
 
         <div>
-          <label className="block">
+          <div className="flex items-center justify-between">
             <span className={labelClass}>Cash Deposit ($)</span>
-            <input
-              type="number"
-              value={config.deposit}
-              onChange={(e) => update('deposit', Number(e.target.value))}
-              className={inputClass}
-            />
-          </label>
+            {config.propertyPrice > 0 && (
+              <button
+                onClick={() => update('deposit', Math.round(config.propertyPrice * 0.2))}
+                className="text-xs px-2 py-0.5 rounded border border-primary text-primary hover:bg-primary/10 transition-colors"
+              >
+                20%
+              </button>
+            )}
+          </div>
+          <input
+            type="number"
+            min="0"
+            value={config.deposit}
+            onChange={(e) => update('deposit', parseNum(e.target.value))}
+            className={inputClass}
+          />
 
           {/* FHBSS sub-section under deposit */}
           <div className="mt-2">
@@ -99,8 +94,9 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
                   <span className={labelClass}>Amount in Super ($)</span>
                   <input
                     type="number"
+                    min="0"
                     value={config.fhbssAmount}
-                    onChange={(e) => update('fhbssAmount', Number(e.target.value))}
+                    onChange={(e) => update('fhbssAmount', parseNum(e.target.value))}
                     className={inputClass}
                   />
                 </label>
@@ -126,9 +122,10 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
           <span className={labelClass}>Interest Rate (%)</span>
           <input
             type="number"
+            min="0"
             step="0.01"
             value={config.annualRate}
-            onChange={(e) => update('annualRate', Number(e.target.value))}
+            onChange={(e) => update('annualRate', parseNum(e.target.value))}
             className={inputClass}
           />
         </label>
@@ -136,8 +133,9 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
           <span className={labelClass}>Loan Term (years)</span>
           <input
             type="number"
+            min="0"
             value={config.termYears}
-            onChange={(e) => update('termYears', Number(e.target.value))}
+            onChange={(e) => update('termYears', parseNum(e.target.value))}
             className={inputClass}
           />
         </label>
@@ -156,72 +154,43 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhbssResult 
             <span className={labelClass}>Offset Balance ($)</span>
             <input
               type="number"
+              min="0"
               value={config.offsetBalance}
-              onChange={(e) => update('offsetBalance', Number(e.target.value))}
+              onChange={(e) => update('offsetBalance', parseNum(e.target.value))}
               className={inputClass}
             />
           </label>
-          {config.offsetBalance > 0 && (
-            <>
-              <label className="block">
-                <span className={labelClass}>Offset grows by $/month</span>
-                <input
-                  type="number"
-                  value={config.offsetMonthlyGrowth}
-                  onChange={(e) => update('offsetMonthlyGrowth', Number(e.target.value))}
-                  className={inputClass}
-                />
-              </label>
-              <label className="block">
-                <span className={labelClass}>Offset grows by %/year</span>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={config.offsetAnnualGrowth}
-                  onChange={(e) => update('offsetAnnualGrowth', Number(e.target.value))}
-                  className={inputClass}
-                />
-              </label>
-            </>
-          )}
+          <label className="block">
+            <span className={labelClass}>Offset grows by $/month</span>
+            <input
+              type="number"
+              min="0"
+              value={config.offsetMonthlyGrowth}
+              onChange={(e) => update('offsetMonthlyGrowth', parseNum(e.target.value))}
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>Offset grows by %/year</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={config.offsetAnnualGrowth}
+              onChange={(e) => update('offsetAnnualGrowth', parseNum(e.target.value))}
+              className={inputClass}
+            />
+          </label>
           <label className="block">
             <span className={labelClass}>Extra Monthly Repayment ($)</span>
             <input
               type="number"
+              min="0"
               value={config.extraMonthly}
-              onChange={(e) => update('extraMonthly', Number(e.target.value))}
+              onChange={(e) => update('extraMonthly', parseNum(e.target.value))}
               className={inputClass}
             />
           </label>
-
-          {/* Lump sums */}
-          <div>
-            <span className={labelClass}>Lump Sum Repayments</span>
-            {(config.lumpSums || []).map((ls, i) => (
-              <div key={i} className="flex gap-2 mt-1">
-                <input
-                  type="number"
-                  placeholder="Month"
-                  value={ls.month}
-                  onChange={(e) => updateLumpSum(i, 'month', e.target.value)}
-                  className={`${inputClass} w-24`}
-                />
-                <input
-                  type="number"
-                  placeholder="Amount"
-                  value={ls.amount}
-                  onChange={(e) => updateLumpSum(i, 'amount', e.target.value)}
-                  className={`${inputClass} flex-1`}
-                />
-                <button onClick={() => removeLumpSum(i)} className="text-destructive hover:text-destructive/80 text-sm">
-                  X
-                </button>
-              </div>
-            ))}
-            <button onClick={addLumpSum} className="text-sm text-primary hover:underline mt-1">
-              + Add lump sum
-            </button>
-          </div>
         </div>
       )}
     </div>

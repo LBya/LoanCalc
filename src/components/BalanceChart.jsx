@@ -21,10 +21,34 @@ function mergeTrajectories(trajectories) {
   return merged;
 }
 
+function CustomLegend({ payload, trajectories }) {
+  if (!payload || payload.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-4 justify-center mt-2">
+      {payload.map((entry) => {
+        const isOffset = entry.value?.endsWith(' Offset');
+        return (
+          <span key={entry.value} className="flex items-center gap-1.5 text-sm text-card-foreground">
+            <svg width="24" height="4" className="shrink-0">
+              <line
+                x1="0" y1="2" x2="24" y2="2"
+                stroke={entry.color}
+                strokeWidth={2}
+                strokeDasharray={isOffset ? "4 3" : "none"}
+              />
+            </svg>
+            {entry.value}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onToggleScenario }) {
   if (!trajectories || trajectories.length === 0) return null;
 
-  // Merge balance trajectories + offset trajectories
   const allTrajectories = [...trajectories, ...(offsetTrajectories || [])];
   const data = mergeTrajectories(allTrajectories);
 
@@ -32,9 +56,6 @@ function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onTo
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}k`;
     return `$${value}`;
   };
-
-  // Map offset trajectory index to its parent scenario index for visibility
-  const offsetCount = offsetTrajectories?.length || 0;
 
   // Build tick array with year-aware labels
   const maxMonth = data.length;
@@ -45,22 +66,25 @@ function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onTo
   return (
     <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
       <h2 className="text-lg font-semibold mb-4 text-card-foreground">Balance Trajectory</h2>
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={data}>
+      <ResponsiveContainer width="100%" height={420}>
+        <LineChart data={data} margin={{ bottom: 28, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis
             dataKey="month"
             stroke="var(--muted-foreground)"
             ticks={yearTicks}
+            tickMargin={8}
             tickFormatter={(month) => {
               const years = month / 12;
               return Number.isInteger(years) ? `${years}yr` : month;
             }}
-            label={{ value: 'Months / Years', position: 'insideBottom', offset: -5, fill: 'var(--muted-foreground)' }}
+            label={{ value: 'Months / Years', position: 'insideBottom', offset: 0, fill: 'var(--muted-foreground)' }}
           />
           <YAxis
             tickFormatter={formatYAxis}
             stroke="var(--muted-foreground)"
+            tickMargin={4}
+            width={60}
             label={{ value: 'Balance', angle: -90, position: 'insideLeft', fill: 'var(--muted-foreground)' }}
           />
           <Tooltip
@@ -74,7 +98,7 @@ function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onTo
             }}
             contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
           />
-          <Legend />
+          <Legend content={<CustomLegend trajectories={trajectories} />} />
           {/* Balance lines */}
           {trajectories.map((t, index) => (
             <Line
@@ -90,7 +114,6 @@ function BalanceChart({ trajectories, offsetTrajectories, visibleScenarios, onTo
           ))}
           {/* Offset lines (dashed) */}
           {(offsetTrajectories || []).map((t, index) => {
-            // Find parent scenario index for visibility
             const parentIndex = trajectories.findIndex(
               (bt) => t.name === `${bt.name} Offset`
             );
