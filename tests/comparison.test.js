@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildComparison } from '../src/engine/comparison';
 import { generateAmortization } from '../src/engine/amortization';
+import { applyOffset } from '../src/engine/offset';
 
 describe('buildComparison', () => {
   it('returns empty for empty input', () => {
@@ -63,5 +64,53 @@ describe('buildComparison', () => {
     expect(trajectories[0].data[0]).toHaveProperty('month');
     expect(trajectories[0].data[0]).toHaveProperty('balance');
     expect(trajectories[0].data).toHaveLength(result.schedule.length);
+  });
+
+  it('includes principalBorrowed and effectiveRate in summary', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([{ name: 'Base', result }]);
+
+    expect(summary[0].principalBorrowed).toBeCloseTo(500000, 0);
+    expect(summary[0].effectiveRate).toBeGreaterThan(0);
+    expect(summary[0].effectiveRate).toBeLessThan(6); // effective rate should be below nominal
+  });
+
+  it('includes cashTiedUp from deposit + offset config', () => {
+    const result = generateAmortization({ principal: 350000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'Deposit', config: { deposit: 250000, offsetBalance: 0 }, result },
+      { name: 'Offset', config: { deposit: 100000, offsetBalance: 150000 }, result },
+    ]);
+
+    expect(summary[0].cashTiedUp).toBe(250000);
+    expect(summary[1].cashTiedUp).toBe(250000);
+  });
+
+  it('counts interestFreeMonths for offset scenario', () => {
+    const base = generateAmortization({ principal: 500000, annualRate: 0.065, termYears: 30 });
+    const offsetResult = applyOffset({
+      principal: 500000,
+      annualRate: 0.065,
+      termYears: 30,
+      offsetBalance: 150001,
+      monthlyRepayment: base.monthlyRepayment,
+    });
+
+    const { summary } = buildComparison([
+      { name: 'Baseline', result: base },
+      { name: 'Offset', result: offsetResult },
+    ]);
+
+    expect(summary[0].interestFreeMonths).toBe(0);
+    expect(summary[1].interestFreeMonths).toBeGreaterThan(0);
+    expect(summary[1].loanTermMonths).toBeLessThan(summary[0].loanTermMonths);
+  });
+
+  it('defaults to zero cashTiedUp when config is absent', () => {
+    const result = generateAmortization({ principal: 300000, annualRate: 0.06, termYears: 25 });
+    const { summary } = buildComparison([{ name: 'NoConfig', result }]);
+
+    expect(summary[0].cashTiedUp).toBe(0);
+    expect(summary[0].interestFreeMonths).toBe(0);
   });
 });

@@ -57,7 +57,9 @@ export function useCalculator(scenarios) {
       return { name: scenario.name, config, fhbssResult, result };
     });
 
-    const comparison = buildComparison(computedScenarios);
+    const comparison = buildComparison(
+      computedScenarios.map((cs) => ({ name: cs.name, config: cs.config, result: cs.result }))
+    );
 
     const insights = generateInsights(
       comparison.summary,
