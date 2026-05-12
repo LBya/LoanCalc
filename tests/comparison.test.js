@@ -113,4 +113,78 @@ describe('buildComparison', () => {
     expect(summary[0].cashTiedUp).toBe(0);
     expect(summary[0].interestFreeMonths).toBe(0);
   });
+
+  it('calculates affordability metrics when salaries are provided', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'WithIncome', config: { salaries: [95000] }, result },
+    ]);
+
+    expect(summary[0].combinedAnnualIncome).toBe(95000);
+    expect(summary[0].debtToIncome).toBeCloseTo(500000 / 95000, 1);
+    expect(summary[0].repaymentToIncome).toBeGreaterThan(0);
+    expect(summary[0].yearsOfSalaryForInterest).toBeGreaterThan(0);
+  });
+
+  it('calculates combined income for couple', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'Couple', config: { salaries: [95000, 85000] }, result },
+    ]);
+
+    expect(summary[0].combinedAnnualIncome).toBe(180000);
+    expect(summary[0].debtToIncome).toBeCloseTo(500000 / 180000, 1);
+  });
+
+  it('returns null affordability when no salaries', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([{ name: 'NoIncome', result }]);
+
+    expect(summary[0].combinedAnnualIncome).toBe(0);
+    expect(summary[0].debtToIncome).toBeNull();
+  });
+
+  it('includes risk rating for scenarios with income', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'Low', config: { salaries: [200000] }, result },
+      { name: 'High', config: { salaries: [50000] }, result },
+    ]);
+
+    expect(summary[0].riskRating).toBe('green');
+    expect(summary[1].riskRating).toBe('red');
+  });
+
+  it('includes color indicators for affordability metrics', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'Low', config: { salaries: [200000] }, result },
+      { name: 'High', config: { salaries: [50000] }, result },
+    ]);
+
+    expect(summary[0].debtToIncomeColor).toBe('green');
+    expect(summary[0].repaymentToIncomeColor).toBeDefined();
+    expect(summary[1].debtToIncomeColor).toBe('red');
+  });
+
+  it('includes offset decomposition when provided', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.065, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'Base', result },
+      {
+        name: 'WithDecomp',
+        result,
+        config: { offsetBalance: 110000 },
+        shadowDecomposition: {
+          plainTotalInterest: 500000,
+          plainLoanTermMonths: 300,
+          offsetInterestSaved: 50000,
+          offsetMonthsSaved: 20,
+        },
+      },
+    ]);
+
+    expect(summary[1].offsetBonus).toBe(50000);
+    expect(summary[1].offsetMonthsSaved).toBe(20);
+  });
 });

@@ -12,11 +12,24 @@ function TextInsights({ insights }) {
     <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
       <h2 className="text-lg font-semibold mb-3 text-card-foreground">Key Insights</h2>
       <ul className="list-none p-0">
-        {insights.map((insight, index) => (
-          <li key={index} className="py-2 px-3 border-l-4 border-primary mb-2 bg-muted text-card-foreground rounded-r-md">
-            {insight}
-          </li>
-        ))}
+        {insights.map((insight, index) => {
+          const isWarning = insight.startsWith('\u26A0');
+          const isAffordability = insight.includes('Debt-to-income') || insight.includes('mortgage stress') || insight.includes('years of combined salary');
+          const borderClass = isWarning
+            ? 'border-amber-500'
+            : isAffordability
+              ? 'border-chart-4'
+              : 'border-primary';
+
+          return (
+            <li
+              key={index}
+              className={`py-2 px-3 border-l-4 ${borderClass} mb-2 bg-muted text-card-foreground rounded-r-md text-sm`}
+            >
+              {insight}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

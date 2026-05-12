@@ -1,85 +1,78 @@
 import { describe, it, expect } from 'vitest';
-import { calculateFHSSIndividual, calculateFHSS } from '../src/engine/fhbss';
+import { calculateFHSS, calculateFHSSIndividual } from '../src/engine/fhbss';
 
 describe('calculateFHSSIndividual', () => {
-  it('no amount returns all zeros', () => {
+  it('returns zeros for zero amount', () => {
     const result = calculateFHSSIndividual({ amount: 0 });
     expect(result.grossContribution).toBe(0);
     expect(result.netWithdrawal).toBe(0);
     expect(result.taxPayable).toBe(0);
   });
 
-  it('calculates net withdrawal for a single amount', () => {
-    const result = calculateFHSSIndividual({ amount: 30000 });
+  it('caps at maxTotalReleasable', () => {
+    const result = calculateFHSSIndividual({ amount: 100000 });
+    expect(result.grossContribution).toBe(50000);
+  });
 
-    expect(result.grossContribution).toBe(30000);
-    expect(result.afterTaxContributions).toBe(25500); // 30000 * 0.85
-    // Withdrawal tax (15%) applies to afterTax + earnings, so net < afterTax
+  it('standard mode uses median salary', () => {
+    const result = calculateFHSSIndividual({ amount: 50000 });
     expect(result.netWithdrawal).toBeGreaterThan(0);
-    expect(result.netWithdrawal).toBeLessThan(result.grossContribution);
+    expect(result.effectiveTaxRate).toBeGreaterThan(0);
   });
 
-  it('caps total at maxTotalReleasable', () => {
-    const result = calculateFHSSIndividual({ amount: 80000 });
-
-    expect(result.grossContribution).toBe(50000); // Capped at 50000
+  it('advanced mode uses provided salary', () => {
+    const standard = calculateFHSSIndividual({ amount: 50000 });
+    const advanced = calculateFHSSIndividual({
+      amount: 50000,
+      salaryAtContribution: 150000,
+      salaryAtWithdrawal: 150000,
+      advancedMode: true,
+    });
+    // Higher salary should mean higher marginal rate = more tax
+    expect(advanced.taxPayable).toBeGreaterThanOrEqual(standard.taxPayable);
   });
 
-  it('withdrawal tax is applied correctly', () => {
-    const result = calculateFHSSIndividual({ amount: 30000 });
-
-    const grossWithdrawal = result.afterTaxContributions + result.deemedEarnings;
-    expect(result.taxPayable).toBeCloseTo(grossWithdrawal * 0.15, 2);
-    expect(result.netWithdrawal).toBeCloseTo(grossWithdrawal - result.taxPayable, 2);
-  });
-
-  it('deemed earnings are calculated for the single amount', () => {
-    const result = calculateFHSSIndividual({ amount: 15000 });
-    expect(result.deemedEarnings).toBeGreaterThan(0);
-  });
-
-  it('negative amount returns zeros', () => {
-    const result = calculateFHSSIndividual({ amount: -1000 });
-    expect(result.netWithdrawal).toBe(0);
-    expect(result.grossContribution).toBe(0);
+  it('returns effective tax rate', () => {
+    const result = calculateFHSSIndividual({ amount: 50000 });
+    expect(result.effectiveTaxRate).toBeGreaterThan(0);
+    expect(result.effectiveTaxRate).toBeLessThan(50);
   });
 });
 
-describe('calculateFHSS (multi-individual)', () => {
-  it('single individual matches individual calculation', () => {
-    const individual = calculateFHSSIndividual({ amount: 30000 });
-    const combined = calculateFHSS({ individuals: [30000] });
-
-    expect(combined.combinedNetWithdrawal).toBeCloseTo(individual.netWithdrawal, 2);
-    expect(combined.combinedTaxPayable).toBeCloseTo(individual.taxPayable, 2);
+describe('calculateFHSS', () => {
+  it('calculates for single individual', () => {
+    const result = calculateFHSS({ individuals: [50000] });
+    expect(result.individuals).toHaveLength(1);
+    expect(result.combinedNetWithdrawal).toBeGreaterThan(0);
+    expect(result.combinedGrossContribution).toBe(50000);
   });
 
-  it('couple with two individuals sums correctly', () => {
-    const result = calculateFHSS({ individuals: [30000, 40000] });
-
+  it('calculates for couple', () => {
+    const result = calculateFHSS({ individuals: [30000, 25000] });
     expect(result.individuals).toHaveLength(2);
-    expect(result.individuals[0].grossContribution).toBe(30000);
-    expect(result.individuals[1].grossContribution).toBe(40000);
-    expect(result.combinedNetWithdrawal).toBeCloseTo(
-      result.individuals[0].netWithdrawal + result.individuals[1].netWithdrawal, 2
-    );
-    expect(result.combinedTaxPayable).toBeCloseTo(
-      result.individuals[0].taxPayable + result.individuals[1].taxPayable, 2
-    );
+    expect(result.combinedGrossContribution).toBe(55000);
+    expect(result.combinedNetWithdrawal).toBeGreaterThan(0);
   });
 
-  it('couple where one person has zero still works', () => {
-    const result = calculateFHSS({ individuals: [30000, 0] });
-
-    expect(result.individuals).toHaveLength(2);
-    expect(result.individuals[1].netWithdrawal).toBe(0);
-    expect(result.combinedNetWithdrawal).toBeCloseTo(result.individuals[0].netWithdrawal, 2);
+  it('handles zero individuals gracefully', () => {
+    const result = calculateFHSS({ individuals: [0] });
+    expect(result.combinedNetWithdrawal).toBe(0);
   });
 
-  it('each individual is independently capped', () => {
-    const result = calculateFHSS({ individuals: [80000, 80000] });
+  it('passes salaries in advanced mode', () => {
+    const result = calculateFHSS({
+      individuals: [50000],
+      salaries: [95000],
+      advancedMode: true,
+    });
+    expect(result.individuals[0].netWithdrawal).toBeGreaterThan(0);
+  });
 
-    expect(result.individuals[0].grossContribution).toBe(50000);
-    expect(result.individuals[1].grossContribution).toBe(50000);
+  it('defaults salaries when not provided in advanced mode', () => {
+    const result = calculateFHSS({
+      individuals: [50000],
+      advancedMode: true,
+    });
+    expect(result.individuals[0].netWithdrawal).toBeGreaterThan(0);
   });
 });

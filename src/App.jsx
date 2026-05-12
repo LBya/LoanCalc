@@ -7,11 +7,11 @@ import ThemeToggle from './components/ThemeToggle';
 import { useCalculator } from './hooks/useCalculator';
 import { convertRepayment, frequencyLabel } from './engine/amortization';
 
-const scenarioNames = ['Baseline', 'Scenario A', 'Scenario B', 'Scenario C'];
+const scenarioNames = ['Scenario A', 'Scenario B', 'Scenario C', 'Scenario D'];
 
 function App() {
   const [scenarios, setScenarios] = useState([
-    { name: 'Baseline', config: { ...defaultConfig } },
+    { name: 'Scenario A', config: { ...defaultConfig } },
   ]);
   const [frequency, setFrequency] = useState('monthly');
   const [visibleScenarios, setVisibleScenarios] = useState([true, true, true, true]);
@@ -119,7 +119,7 @@ function App() {
                 onClick={() => addScenario(true)}
                 className="flex-1 py-2 text-sm text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors border-r border-border"
               >
-                Copy Baseline
+                Copy First
               </button>
               <button
                 onClick={() => addScenario(false)}

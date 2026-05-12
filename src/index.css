@@ -129,3 +129,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* CalculationPopover z-index and positioning */
+.calc-popover {
+  z-index: 50;
+  position: absolute;
+}
