@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set
@@ -54,8 +55,9 @@ EXCLUDED_PATTERNS_BASE: List[str] = [
     # Environment files
     "**/.env", "**/.env.*",
 
-    # Cache and build artifacts
-    "**/__pycache__/**",
+    # Lock files (deps are summarised from package.json instead)
+    "package-lock.json",
+
 
     # Generated structure docs (prevent recursion)
     "*struc_*.md", "**/*struc_*.md",
@@ -238,6 +240,30 @@ SUFFIX_LANG_MAP = {
 }
 
 
+def generate_deps_table(project_root: Path) -> List[str]:
+    """Parse package.json and return a markdown table of dependencies."""
+    pkg_path = project_root / "package.json"
+    if not pkg_path.exists():
+        return []
+    try:
+        pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    lines: List[str] = []
+    for section in ("dependencies", "devDependencies"):
+        deps = pkg.get(section)
+        if not deps:
+            continue
+        lines.append(f"**{section}:**\n")
+        lines.append("| Package | Version |")
+        lines.append("|---------|---------|")
+        for name, version in sorted(deps.items()):
+            lines.append(f"| {name} | `{version}` |")
+        lines.append("")
+    return lines
+
+
 def embed_all_files(project_root: Path, markdown: List[str]) -> None:
     print("[*] Embedding source files...")
     count = 0
@@ -274,6 +300,11 @@ def generate_doc(project_root: Path, output_md: Path) -> None:
     md.append("## Directory Tree\n```")
     md.extend(walk_tree(project_root))
     md.append("```\n")
+
+    deps = generate_deps_table(project_root)
+    if deps:
+        md.append("## Dependencies\n")
+        md.extend(deps)
 
     md.append("## Source Code Files\n")
     embed_all_files(project_root, md)
