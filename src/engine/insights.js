@@ -34,18 +34,18 @@ export function generateInsights(summary, scenarioConfigs) {
 
     if (s.interestSavedVsBaseline > 0) {
       const pct = ((s.interestSavedVsBaseline / baseline.totalInterest) * 100).toFixed(1);
-      const repaymentDir = s.monthlyRepayment > baseline.monthlyRepayment ? 'higher' : 'lower';
+      const repaymentDiff = getRepaymentDirection(s.monthlyRepayment, baseline.monthlyRepayment);
       insights.push(
         `${s.name} saves ${formatMoney(s.interestSavedVsBaseline)} in interest (${pct}% less) ` +
-        `with ${repaymentDir} repayments of ${formatMoney(s.monthlyRepayment)}/mo. ` +
+        `with ${repaymentDiff} repayments of ${formatMoney(s.monthlyRepayment)}/mo. ` +
         `Pays off in ${formatTerm(s.loanTermMonths)} vs ${baseline.name}'s ${formatTerm(baseline.loanTermMonths)}.`
       );
     } else if (s.interestSavedVsBaseline < 0) {
       const extraCost = Math.abs(s.interestSavedVsBaseline);
-      const repaymentDir = s.monthlyRepayment > baseline.monthlyRepayment ? 'higher' : 'lower';
+      const repaymentDiff = getRepaymentDirection(s.monthlyRepayment, baseline.monthlyRepayment);
       insights.push(
         `${s.name} costs ${formatMoney(extraCost)} more in interest than ${baseline.name}, ` +
-        `with ${repaymentDir} repayments (${formatMoney(s.monthlyRepayment)}/mo vs ${formatMoney(baseline.monthlyRepayment)}/mo).`
+        `with ${repaymentDiff} repayments (${formatMoney(s.monthlyRepayment)}/mo vs ${formatMoney(baseline.monthlyRepayment)}/mo).`
       );
     }
 
@@ -137,11 +137,13 @@ export function generateInsights(summary, scenarioConfigs) {
 function analyzeDimensions(baseline, nonBaseline) {
   const tradeOffs = [];
 
+  const DTI_TOLERANCE = 0.01; // Ignore DTI differences smaller than 0.01x
+
   for (const s of nonBaseline) {
     const winsInterest = s.interestSavedVsBaseline > 0;
-    const winsCashflow = s.monthlyRepayment < baseline.monthlyRepayment;
+    const winsCashflow = s.monthlyRepayment < baseline.monthlyRepayment - 1;
     const winsDebtFree = s.loanTermMonths < baseline.loanTermMonths;
-    const winsAffordability = s.debtToIncome !== null && baseline.debtToIncome !== null && s.debtToIncome < baseline.debtToIncome;
+    const winsAffordability = s.debtToIncome !== null && baseline.debtToIncome !== null && (baseline.debtToIncome - s.debtToIncome) > DTI_TOLERANCE;
 
     const wins = [winsInterest, winsCashflow, winsDebtFree, winsAffordability].filter(Boolean).length;
     const losses = [!winsInterest, !winsCashflow, !winsDebtFree, !winsAffordability].filter(Boolean).length;
@@ -154,13 +156,13 @@ function analyzeDimensions(baseline, nonBaseline) {
       else if (s.interestSavedVsBaseline < 0) lossLabels.push(`costs ${formatMoney(Math.abs(s.interestSavedVsBaseline))} more in interest`);
 
       if (winsCashflow) winLabels.push(`lower repayments (${formatMoney(s.monthlyRepayment)}/mo vs ${formatMoney(baseline.monthlyRepayment)})`);
-      else if (s.monthlyRepayment > baseline.monthlyRepayment) lossLabels.push(`higher repayments (${formatMoney(s.monthlyRepayment)}/mo vs ${formatMoney(baseline.monthlyRepayment)})`);
+      else if (s.monthlyRepayment > baseline.monthlyRepayment + 1) lossLabels.push(`higher repayments (${formatMoney(s.monthlyRepayment)}/mo vs ${formatMoney(baseline.monthlyRepayment)})`);
 
       if (winsDebtFree) winLabels.push(`debt-free ${formatMonthsSaved(baseline.loanTermMonths - s.loanTermMonths)} sooner`);
       else if (s.loanTermMonths > baseline.loanTermMonths) lossLabels.push(`takes ${formatMonthsSaved(s.loanTermMonths - baseline.loanTermMonths)} longer to pay off`);
 
       if (winsAffordability) winLabels.push('lower debt-to-income ratio');
-      else if (s.debtToIncome !== null && baseline.debtToIncome !== null && s.debtToIncome > baseline.debtToIncome) lossLabels.push('higher debt-to-income ratio');
+      else if (s.debtToIncome !== null && baseline.debtToIncome !== null && (s.debtToIncome - baseline.debtToIncome) > DTI_TOLERANCE) lossLabels.push('higher debt-to-income ratio');
 
       if (winLabels.length > 0 && lossLabels.length > 0) {
         tradeOffs.push(
@@ -194,4 +196,9 @@ function formatTerm(months) {
   if (years > 0 && remainMonths > 0) return `${years}y ${remainMonths}m`;
   if (years > 0) return `${years} year${years !== 1 ? 's' : ''}`;
   return `${months} months`;
+}
+
+function getRepaymentDirection(a, b) {
+  if (Math.abs(a - b) < 1) return 'the same';
+  return a > b ? 'higher' : 'lower';
 }

@@ -47,12 +47,37 @@ describe('generateInsights', () => {
       { ...base, name: 'Worse', monthlyRepayment: 2800, totalInterest: 700000, totalPaid: 1200000, loanTermMonths: 400, interestSavedVsBaseline: -62278, monthsSavedVsBaseline: -40 },
     ]);
     const result = generateInsights(summary, [
-      { name: 'Baseline', config: {} },
+      { name: 'Scenario A', config: {} },
       { name: 'Worse', config: {} },
     ]);
     const worseInsight = result.find(r => r.includes('more in interest'));
     expect(worseInsight).toBeDefined();
     expect(worseInsight).toContain('lower');
+  });
+
+  it('says "same repayments" when repayments are identical', () => {
+    const summary = makeSummary([
+      { ...base, name: 'Same', monthlyRepayment: 3160, totalInterest: 700000, totalPaid: 1200000, loanTermMonths: 243, interestSavedVsBaseline: -62278, monthsSavedVsBaseline: 117 },
+    ]);
+    const result = generateInsights(summary, [
+      { name: 'Scenario A', config: {} },
+      { name: 'Same', config: {} },
+    ]);
+    const sameInsight = result.find(r => r.includes('more in interest') && r.includes('same'));
+    expect(sameInsight).toBeDefined();
+  });
+
+  it('does not claim DTI win when DTI is essentially equal', () => {
+    const summary = makeSummary([
+      { ...base, name: 'SameDTI', monthlyRepayment: 3160, totalInterest: 400000, totalPaid: 800000, loanTermMonths: 243, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 117, debtToIncome: 2.115 },
+    ]);
+    const result = generateInsights(summary, [
+      { name: 'Scenario A', config: {} },
+      { name: 'SameDTI', config: {} },
+    ]);
+    const dtiClaim = result.find(r => r.includes('debt-to-income'));
+    // Should NOT claim a DTI win since they're within tolerance
+    expect(dtiClaim).toBeUndefined();
   });
 
   it('generates offset benefit insight with specific offset amount', () => {
