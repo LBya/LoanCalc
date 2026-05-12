@@ -6,4 +6,7 @@ dist
 ### examples and logs
 export_log/
 
+### generated structure docs
+*struc_*.md
+
 .venv
