@@ -188,7 +188,7 @@ const affordabilityMetrics = [
 function MetricRows({ metrics: metricDefs, summary, repaymentLabel, startIndex, isAffordability }) {
   return metricDefs.map(({ label, key, colorKey, format, explanation, formula }, i) => (
     <tr key={key} className={(startIndex + i) % 2 === 0 ? 'bg-muted' : ''}>
-      <td className="py-2 px-3 font-medium text-card-foreground whitespace-nowrap">
+      <td className="py-1.5 px-2 sm:py-2 sm:px-3 font-medium text-card-foreground whitespace-normal sm:whitespace-nowrap">
         {key === 'repayment' ? `${repaymentLabel} Repayment` : label}
         <CalculationPopover
           explanation={explanation}
@@ -198,7 +198,7 @@ function MetricRows({ metrics: metricDefs, summary, repaymentLabel, startIndex, 
       {summary.map((s) => {
         const colorClass = isAffordability && colorKey && s[colorKey] ? colorClasses[s[colorKey]] : '';
         return (
-          <td key={s.name} className={`text-right py-2 px-3 tabular-nums ${colorClass || 'text-card-foreground'}`}>
+          <td key={s.name} className={`text-right py-1.5 px-2 sm:py-2 sm:px-3 tabular-nums whitespace-nowrap ${colorClass || 'text-card-foreground'}`}>
             {typeof format === 'function' ? format(s[key]) : s[key]}
           </td>
         );
@@ -220,12 +220,12 @@ function ComparisonTable({ summary, frequency }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm min-w-[500px]">
+      <table className="w-full border-collapse text-xs sm:text-sm">
         <thead>
           <tr className="border-b-2 border-border">
-            <th className="text-left py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">Metric</th>
+            <th className="text-left py-1.5 px-2 sm:py-2 sm:px-3 font-medium text-muted-foreground whitespace-nowrap">Metric</th>
             {summary.map((s) => (
-              <th key={s.name} className="text-right py-2 px-3 font-medium text-card-foreground whitespace-nowrap">{s.name}</th>
+              <th key={s.name} className="text-right py-1.5 px-2 sm:py-2 sm:px-3 font-medium text-card-foreground whitespace-nowrap">{s.name}</th>
             ))}
           </tr>
         </thead>

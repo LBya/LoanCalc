@@ -54,7 +54,7 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult, 
   const fhssPersonCount = (showApp2 || config.app2Fhss > 0) ? 2 : 1;
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-card shadow-sm">
+    <div className="border border-border rounded-lg p-3 sm:p-4 bg-card shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <input
           value={scenario.name}
@@ -113,7 +113,7 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult, 
         </div>
 
         {/* State & FHB */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <label className="block">
             <span className={labelClass}>State</span>
             <select
@@ -162,7 +162,7 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult, 
         {/* Applicant 1 */}
         <div>
           <span className={labelClass}>Applicant 1</span>
-          <div className="grid grid-cols-2 gap-2 mt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
             <input
               type="number"
               min="0"
@@ -212,7 +212,7 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult, 
                 Remove
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
               <input
                 type="number"
                 min="0"
@@ -293,7 +293,7 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult, 
                 <p className="text-xs text-muted-foreground mb-2">
                   Withdrawal-year salary per applicant. Defaults to salary above (or median $95,000).
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="number"
                     min="0"

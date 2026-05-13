@@ -87,13 +87,13 @@ function App() {
   const frequencies = ['monthly', 'fortnightly', 'weekly'];
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen w-full bg-background text-foreground p-3 sm:p-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <h1 className="text-2xl font-bold text-foreground">LoanCalc</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={exportLog}
-            className="px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent text-card-foreground text-sm font-medium transition-colors"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-border bg-card hover:bg-accent text-card-foreground text-xs sm:text-sm font-medium transition-colors"
           >
             Export Log
           </button>
@@ -101,10 +101,10 @@ function App() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <aside className="flex flex-row lg:flex-col gap-4 overflow-x-auto lg:overflow-x-visible lg:w-[400px] lg:shrink-0 pb-2 lg:pb-0">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+        <aside className="flex flex-col lg:flex-col gap-4 lg:w-[400px] lg:shrink-0">
           {scenarios.map((scenario, index) => (
-            <div key={index} className="min-w-[340px] lg:min-w-0">
+            <div key={index} className="lg:min-w-0">
               <ScenarioConfig
                 scenario={scenario}
                 isBaseline={index === 0}
