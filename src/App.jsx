@@ -87,7 +87,7 @@ function App() {
   const frequencies = ['monthly', 'fortnightly', 'weekly'];
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
+    <div className="min-h-screen w-full bg-background text-foreground p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">LoanCalc</h1>
         <div className="flex items-center gap-2">
@@ -101,17 +101,19 @@ function App() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[400px_1fr] gap-6">
-        <aside className="space-y-4 max-h-screen overflow-y-auto pr-2">
+      <div className="flex flex-col lg:flex-row gap-6">
+        <aside className="flex flex-row lg:flex-col gap-4 overflow-x-auto lg:overflow-x-visible lg:w-[400px] lg:shrink-0 pb-2 lg:pb-0">
           {scenarios.map((scenario, index) => (
-            <ScenarioConfig
-              key={index}
-              scenario={scenario}
-              isBaseline={index === 0}
-              onChange={(updated) => updateScenario(index, updated)}
-              onRemove={() => removeScenario(index)}
-              fhssResult={computedScenarios[index]?.fhssResult}
-            />
+            <div key={index} className="min-w-[340px] lg:min-w-0">
+              <ScenarioConfig
+                scenario={scenario}
+                isBaseline={index === 0}
+                onChange={(updated) => updateScenario(index, updated)}
+                onRemove={() => removeScenario(index)}
+                fhssResult={computedScenarios[index]?.fhssResult}
+                acquisitionCosts={computedScenarios[index] ? { stampDuty: computedScenarios[index].stampDuty, lmi: computedScenarios[index].lmi } : undefined}
+              />
+            </div>
           ))}
           {scenarios.length < 4 && (
             <div className="flex border-2 border-dashed border-border rounded-lg overflow-hidden">
@@ -131,7 +133,7 @@ function App() {
           )}
         </aside>
 
-        <main className="flex flex-col gap-6">
+        <main className="flex flex-col gap-6 min-w-0 flex-1">
           {/* Frequency tabs */}
           <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
             <div className="flex items-center gap-1 mb-4 border-b border-border">

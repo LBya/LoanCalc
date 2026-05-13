@@ -1,27 +1,37 @@
 import { useState } from 'react';
+import { calculateStampDuty } from '../engine/acquisition';
+
+const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
 const defaultConfig = {
   propertyPrice: 600000,
   deposit: 100000,
   annualRate: 6.5,
   termYears: 30,
+  state: 'NSW',
+  isFHB: true,
+  app1Salary: 0,
+  app1Fhss: 0,
+  app2Salary: 0,
+  app2Fhss: 0,
   offsetBalance: 0,
   offsetMonthlyGrowth: 0,
   offsetAnnualGrowth: 0,
   extraMonthly: 0,
-  fhssIndividuals: [0],
-  salaries: [],
   fhssAdvanced: false,
   repaymentFrequency: 'monthly',
 };
 
 export { defaultConfig };
 
-function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult }) {
+function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult, acquisitionCosts }) {
   const config = scenario.config;
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showFhss, setShowFhss] = useState((config.fhssIndividuals || []).some((a) => a > 0));
+  const [showFhss, setShowFhss] = useState(
+    (config.app1Fhss > 0) || (config.app2Fhss > 0)
+  );
   const [showFhssAdvanced, setShowFhssAdvanced] = useState(config.fhssAdvanced || false);
+  const [showApp2, setShowApp2] = useState((config.app2Salary > 0) || (config.app2Fhss > 0));
 
   const update = (field, value) => {
     onChange({ ...scenario, config: { ...config, [field]: value } });
@@ -34,65 +44,14 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult }
   const compactInputClass = "w-full border border-border rounded px-2 py-1 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent";
 
   const combinedNet = fhssResult?.combinedNetWithdrawal ?? 0;
-  const effectiveDeposit = config.deposit + combinedNet;
+  const stampDuty = acquisitionCosts?.stampDuty ?? 0;
+  const lmi = acquisitionCosts?.lmi ?? 0;
+  const effectiveDeposit = config.deposit + combinedNet - stampDuty;
 
-  const individuals = config.fhssIndividuals || [0];
-  const salaries = config.salaries || [];
-  const personCount = Math.max(individuals.length, salaries.length > 0 ? salaries.length : individuals.length > 1 ? individuals.length : 1);
+  const combinedAnnualIncome = (config.app1Salary || 0) + (config.app2Salary || 0);
 
-  // Ensure arrays are padded to personCount
-  const paddedSalaries = Array.from({ length: personCount }, (_, i) => salaries[i] || 0);
-  const paddedIndividuals = Array.from({ length: personCount }, (_, i) => individuals[i] || 0);
-
-  const ensureArrays = (newSalaries, newIndividuals) => {
-    const maxLen = Math.max(newSalaries.length, newIndividuals.length, personCount);
-    const s = Array.from({ length: maxLen }, (_, i) => newSalaries[i] ?? 0);
-    const ind = Array.from({ length: maxLen }, (_, i) => newIndividuals[i] ?? 0);
-    return { salaries: s, fhssIndividuals: ind };
-  };
-
-  const addIndividual = () => {
-    const newCount = personCount + 1;
-    const newSalaries = Array.from({ length: newCount }, (_, i) => paddedSalaries[i] || 0);
-    const newIndividuals = Array.from({ length: newCount }, (_, i) => paddedIndividuals[i] || 0);
-    onChange({
-      ...scenario,
-      config: { ...config, salaries: newSalaries, fhssIndividuals: newIndividuals },
-    });
-  };
-
-  const removeIndividual = (index) => {
-    if (personCount <= 1) return;
-    const newSalaries = paddedSalaries.filter((_, i) => i !== index);
-    const newIndividuals = paddedIndividuals.filter((_, i) => i !== index);
-    onChange({
-      ...scenario,
-      config: { ...config, salaries: newSalaries, fhssIndividuals: newIndividuals },
-    });
-  };
-
-  const updateIndividual = (index, value) => {
-    const updated = [...paddedIndividuals];
-    updated[index] = parseNum(value);
-    const { salaries: s } = ensureArrays(paddedSalaries, updated);
-    onChange({
-      ...scenario,
-      config: { ...config, fhssIndividuals: ensureArrays(s, updated).fhssIndividuals, salaries: s },
-    });
-  };
-
-  const updateSalary = (index, value) => {
-    const updated = [...paddedSalaries];
-    updated[index] = parseNum(value);
-    const { fhssIndividuals: ind } = ensureArrays(updated, paddedIndividuals);
-    onChange({
-      ...scenario,
-      config: { ...config, salaries: ensureArrays(updated, ind).salaries, fhssIndividuals: ind },
-    });
-  };
-
-  const combinedAnnualIncome = paddedSalaries.reduce((sum, s) => sum + (s || 0), 0);
-  const showPersonLabels = personCount > 1;
+  // Determine which FHSS person is which index in the result
+  const fhssPersonCount = (showApp2 || config.app2Fhss > 0) ? 2 : 1;
 
   return (
     <div className="border border-border rounded-lg p-4 bg-card shadow-sm">
@@ -125,12 +84,23 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult }
           <div className="flex items-center justify-between">
             <span className={labelClass}>Cash Deposit ($)</span>
             {config.propertyPrice > 0 && (
-              <button
-                onClick={() => update('deposit', Math.round(config.propertyPrice * 0.2))}
-                className="text-xs px-2 py-0.5 rounded border border-primary text-primary hover:bg-primary/10 transition-colors"
-              >
-                20%
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => update('deposit', Math.round(config.propertyPrice * 0.2))}
+                  className="text-xs px-2 py-0.5 rounded border border-primary text-primary hover:bg-primary/10 transition-colors"
+                >
+                  20%
+                </button>
+                <button
+                  onClick={() => {
+                    const sd = calculateStampDuty(config.propertyPrice, config.state || 'NSW', config.isFHB !== false);
+                    update('deposit', Math.round(config.propertyPrice * 0.2 + sd));
+                  }}
+                  className="text-xs px-2 py-0.5 rounded border border-primary text-primary hover:bg-primary/10 transition-colors"
+                >
+                  20% + SD
+                </button>
+              </div>
             )}
           </div>
           <input
@@ -142,196 +112,240 @@ function ScenarioConfig({ scenario, isBaseline, onChange, onRemove, fhssResult }
           />
         </div>
 
-        {/* Salary Info Header */}
-        <div>
-          <span className={labelClass}>Pre-tax Salary</span>
-          <div className="mt-1">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-1 px-2 text-xs text-muted-foreground font-medium w-8"></th>
-                  {Array.from({ length: personCount }, (_, i) => (
-                    <th key={i} className="text-center py-1 px-2 text-xs text-muted-foreground font-medium">
-                      {showPersonLabels ? `P${i + 1}` : ''}
-                    </th>
-                  ))}
-                  <th className="w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="py-1 px-2 text-xs text-muted-foreground">Salary</td>
-                  {Array.from({ length: personCount }, (_, i) => (
-                    <td key={i} className="py-1 px-1">
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="95,000"
-                        value={paddedSalaries[i] || ''}
-                        onChange={(e) => updateSalary(i, e.target.value)}
-                        className={compactInputClass}
-                      />
-                    </td>
-                  ))}
-                  <td className="py-1 px-1">
-                    {personCount < 2 && (
-                      <button onClick={addIndividual} className="text-primary hover:text-primary/80 text-xs" title="Add individual">+</button>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            {personCount >= 2 && (
-              <div className="flex items-center justify-between mt-1">
-                <button onClick={() => removeIndividual(personCount - 1)} className="text-xs text-destructive hover:text-destructive/80">
-                  Remove P{personCount}
-                </button>
-                <button onClick={addIndividual} className="text-xs text-primary hover:underline">
-                  + Add individual
-                </button>
-              </div>
+        {/* State & FHB */}
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className={labelClass}>State</span>
+            <select
+              value={config.state || 'NSW'}
+              onChange={(e) => update('state', e.target.value)}
+              className={inputClass}
+            >
+              {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelClass}>First Home Buyer</span>
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="checkbox"
+                checked={config.isFHB !== false}
+                onChange={(e) => update('isFHB', e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-ring"
+              />
+              <span className="text-xs text-muted-foreground">Eligible for exemptions</span>
+            </div>
+          </label>
+        </div>
+
+        {/* Acquisition cost badges */}
+        {(stampDuty > 0 || lmi > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {stampDuty > 0 && (
+              <span className="text-xs px-2 py-1 rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                Stamp Duty: ${Math.round(stampDuty).toLocaleString()}
+              </span>
             )}
-            {combinedAnnualIncome > 0 && (
+            {lmi > 0 && (
+              <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                LMI: ${Math.round(lmi).toLocaleString()}
+              </span>
+            )}
+          </div>
+        )}
+        {stampDuty === 0 && config.isFHB && config.propertyPrice > 0 && (
+          <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            Stamp Duty: $0 (FHB exempt)
+          </span>
+        )}
+
+        {/* Applicant 1 */}
+        <div>
+          <span className={labelClass}>Applicant 1</span>
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            <input
+              type="number"
+              min="0"
+              placeholder="Pre-tax Salary"
+              value={config.app1Salary || ''}
+              onChange={(e) => update('app1Salary', parseNum(e.target.value))}
+              className={compactInputClass}
+            />
+            {showFhss && (
+              <input
+                type="number"
+                min="0"
+                placeholder="FHSS Amount"
+                value={config.app1Fhss || ''}
+                onChange={(e) => update('app1Fhss', parseNum(e.target.value))}
+                className={compactInputClass}
+              />
+            )}
+          </div>
+          {showFhss && fhssResult?.individuals?.[0]?.netWithdrawal > 0 && config.app1Fhss > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              FHSS net: <span className="text-primary font-medium">${Math.round(fhssResult.individuals[0].netWithdrawal).toLocaleString()}</span>
+              {fhssResult.individuals[0].effectiveTaxRate > 0 && (
+                <span className="text-muted-foreground ml-1">({fhssResult.individuals[0].effectiveTaxRate.toFixed(1)}% tax)</span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {/* Applicant 2 (Optional) */}
+        {!showApp2 ? (
+          <button onClick={() => setShowApp2(true)} className="text-sm text-primary hover:underline">
+            + Add Applicant 2
+          </button>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between">
+              <span className={labelClass}>Applicant 2 (Optional)</span>
+              <button
+                onClick={() => {
+                  setShowApp2(false);
+                  update('app2Salary', 0);
+                  update('app2Fhss', 0);
+                }}
+                className="text-xs text-destructive hover:text-destructive/80"
+              >
+                Remove
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <input
+                type="number"
+                min="0"
+                placeholder="Pre-tax Salary"
+                value={config.app2Salary || ''}
+                onChange={(e) => update('app2Salary', parseNum(e.target.value))}
+                className={compactInputClass}
+              />
+              {showFhss && (
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="FHSS Amount"
+                  value={config.app2Fhss || ''}
+                  onChange={(e) => update('app2Fhss', parseNum(e.target.value))}
+                  className={compactInputClass}
+                />
+              )}
+            </div>
+            {showFhss && fhssResult?.individuals?.[1]?.netWithdrawal > 0 && config.app2Fhss > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                Combined: <span className="text-card-foreground font-medium">${Math.round(combinedAnnualIncome).toLocaleString()}/yr</span>
+                FHSS net: <span className="text-primary font-medium">${Math.round(fhssResult.individuals[1].netWithdrawal).toLocaleString()}</span>
+                {fhssResult.individuals[1].effectiveTaxRate > 0 && (
+                  <span className="text-muted-foreground ml-1">({fhssResult.individuals[1].effectiveTaxRate.toFixed(1)}% tax)</span>
+                )}
               </p>
             )}
           </div>
-        </div>
+        )}
 
-        {/* FHSS Section */}
-        <div>
+        {/* Combined income display */}
+        {combinedAnnualIncome > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Combined: <span className="text-card-foreground font-medium">${Math.round(combinedAnnualIncome).toLocaleString()}/yr</span>
+          </p>
+        )}
+
+        {/* FHSS toggle */}
+        {!showFhss && (
           <button
-            onClick={() => setShowFhss(!showFhss)}
+            onClick={() => setShowFhss(true)}
             className="text-sm text-primary hover:underline"
           >
-            {showFhss ? 'Hide' : 'Add'} FHSS Super Saver
+            Add FHSS Super Saver
           </button>
+        )}
 
-          {showFhss && (
-            <div className="mt-2 p-3 bg-muted rounded-md">
-              <table className="w-full border-collapse text-sm">
-                <tbody>
-                  <tr className="border-b border-border">
-                    <td className="py-1 px-2 text-xs text-muted-foreground w-8"></td>
-                    {Array.from({ length: personCount }, (_, i) => (
-                      <td key={i} className="text-center py-1 px-2 text-xs text-muted-foreground font-medium">
-                        {showPersonLabels ? `P${i + 1}` : ''}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="py-1 px-2 text-xs text-muted-foreground whitespace-nowrap">FHSS $</td>
-                    {Array.from({ length: personCount }, (_, i) => (
-                      <td key={i} className="py-1 px-1">
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="Amount"
-                          value={paddedIndividuals[i] || ''}
-                          onChange={(e) => updateIndividual(i, e.target.value)}
-                          className={compactInputClass}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                  {/* FHSS net results per person */}
-                  {fhssResult && paddedIndividuals.some((a) => a > 0) && (
-                    <tr>
-                      <td className="py-1 px-2 text-xs text-muted-foreground whitespace-nowrap">Net</td>
-                      {fhssResult.individuals.map((r, i) => (
-                        <td key={i} className="py-1 px-1 text-center">
-                          {r.netWithdrawal > 0 ? (
-                            <span>
-                              <span className="text-primary font-medium text-xs">${Math.round(r.netWithdrawal).toLocaleString()}</span>
-                              {r.effectiveTaxRate > 0 && (
-                                <span className="text-[10px] text-muted-foreground ml-0.5">({r.effectiveTaxRate.toFixed(1)}%)</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* FHSS Advanced toggle */}
+        {showFhss && (
+          <div className="p-3 bg-muted rounded-md">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-card-foreground">FHSS Super Saver</span>
               <button
                 onClick={() => {
-                  const newVal = !showFhssAdvanced;
-                  setShowFhssAdvanced(newVal);
-                  update('fhssAdvanced', newVal);
+                  setShowFhss(false);
+                  update('app1Fhss', 0);
+                  update('app2Fhss', 0);
                 }}
-                className="text-xs text-muted-foreground hover:text-primary transition-colors block mt-2"
+                className="text-xs text-muted-foreground hover:text-destructive"
               >
-                {showFhssAdvanced ? 'Hide' : 'Show'} advanced tax calculation
+                Hide
               </button>
-
-              {showFhssAdvanced && (
-                <div className="mt-2 p-2 bg-background rounded border border-border">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Withdrawal-year salary per individual. Defaults to salary above (or median $95,000).
-                  </p>
-                  <table className="w-full border-collapse text-sm">
-                    <tbody>
-                      <tr>
-                        <td className="py-1 px-2 text-xs text-muted-foreground whitespace-nowrap w-8"></td>
-                        {Array.from({ length: personCount }, (_, i) => (
-                          <td key={i} className="text-center py-1 px-2 text-xs text-muted-foreground font-medium">
-                            {showPersonLabels ? `P${i + 1}` : ''}
-                          </td>
-                        ))}
-                      </tr>
-                      <tr>
-                        <td className="py-1 px-2 text-xs text-muted-foreground whitespace-nowrap">W/draw $</td>
-                        {Array.from({ length: personCount }, (_, i) => (
-                          <td key={i} className="py-1 px-1">
-                            <input
-                              type="number"
-                              min="0"
-                              placeholder={String(paddedSalaries[i] || 95000)}
-                              value={config.fhssWithdrawalSalaries?.[i] || ''}
-                              onChange={(e) => {
-                                const updated = [...(config.fhssWithdrawalSalaries || Array(personCount).fill(''))];
-                                updated[i] = parseNum(e.target.value);
-                                update('fhssWithdrawalSalaries', updated);
-                              }}
-                              className={compactInputClass}
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
-                  <a
-                    href="https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/withdrawing-and-using-your-super/first-home-super-saver-scheme"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline block mt-2"
-                  >
-                    ATO FHSS scheme info ↗
-                  </a>
-                </div>
-              )}
-
-              {/* Combined net for couples */}
-              {fhssResult && paddedIndividuals.some((a) => a > 0) && personCount > 1 && combinedNet > 0 && (
-                <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
-                  Combined net: <span className="text-primary font-semibold">${Math.round(combinedNet).toLocaleString()}</span>
-                </p>
-              )}
             </div>
-          )}
-        </div>
+
+            {/* FHSS Advanced toggle */}
+            <button
+              onClick={() => {
+                const newVal = !showFhssAdvanced;
+                setShowFhssAdvanced(newVal);
+                update('fhssAdvanced', newVal);
+              }}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors block mb-2"
+            >
+              {showFhssAdvanced ? 'Hide' : 'Show'} advanced tax calculation
+            </button>
+
+            {showFhssAdvanced && (
+              <div className="p-2 bg-background rounded border border-border">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Withdrawal-year salary per applicant. Defaults to salary above (or median $95,000).
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder={`Withdraw salary (P1)`}
+                    value={config.fhssWithdrawalSalaries?.[0] || ''}
+                    onChange={(e) => {
+                      const updated = [...(config.fhssWithdrawalSalaries || ['', ''])];
+                      updated[0] = parseNum(e.target.value);
+                      update('fhssWithdrawalSalaries', updated);
+                    }}
+                    className={compactInputClass}
+                  />
+                  {showApp2 && (
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder={`Withdraw salary (P2)`}
+                      value={config.fhssWithdrawalSalaries?.[1] || ''}
+                      onChange={(e) => {
+                        const updated = [...(config.fhssWithdrawalSalaries || ['', ''])];
+                        updated[1] = parseNum(e.target.value);
+                        update('fhssWithdrawalSalaries', updated);
+                      }}
+                      className={compactInputClass}
+                    />
+                  )}
+                </div>
+                <a
+                  href="https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/withdrawing-and-using-your-super/first-home-super-saver-scheme"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline block mt-2"
+                >
+                  ATO FHSS scheme info
+                </a>
+              </div>
+            )}
+
+            {/* Combined net display */}
+            {fhssResult && combinedNet > 0 && (
+              <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
+                Combined net: <span className="text-primary font-semibold">${Math.round(combinedNet).toLocaleString()}</span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Total deposit summary */}
         {(combinedNet > 0 || config.deposit > 0) && (
           <p className="text-sm text-muted-foreground">
-            Total deposit: <span className="text-card-foreground font-semibold">${Math.round(effectiveDeposit).toLocaleString()}</span>
-            {combinedNet > 0 && <span className="text-muted-foreground"> (cash + FHSS)</span>}
+            Effective deposit: <span className="text-card-foreground font-semibold">${Math.round(effectiveDeposit).toLocaleString()}</span>
+            {combinedNet > 0 && <span className="text-muted-foreground"> (cash + FHSS - stamp duty)</span>}
           </p>
         )}
 

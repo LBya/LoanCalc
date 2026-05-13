@@ -8,6 +8,7 @@ const base = {
   yearsOfSalaryForInterest: null, offsetEfficiency: null, riskRating: null,
   cashFlowSavings: null, offsetBonus: null, cashFlowMonthsSaved: null, offsetMonthsSaved: null,
   debtToIncomeColor: null, repaymentToIncomeColor: null, yearsOfSalaryColor: null,
+  apraStressRatio: null,
 };
 
 const makeSummary = (overrides = []) => [base, ...overrides];
@@ -159,5 +160,57 @@ describe('generateInsights', () => {
     ]);
     const effInsight = result.find(r => r.includes('saves $'));
     expect(effInsight).toBeDefined();
+  });
+
+  it('generates APRA stress insight when stress ratio exceeds 40%', () => {
+    const summary = makeSummary([
+      {
+        ...base, name: 'Stressed', monthlyRepayment: 3160, totalInterest: 400000, totalPaid: 800000,
+        loanTermMonths: 280, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 80,
+        combinedAnnualIncome: 50000, debtToIncome: 10, yearsOfSalaryForInterest: 8,
+        riskRating: 'red', apraStressRatio: 55,
+      },
+    ]);
+    const result = generateInsights(summary, [
+      { name: 'Baseline', config: {} },
+      { name: 'Stressed', config: { annualRate: 0.06, termYears: 30, salaries: [50000] } },
+    ]);
+    const apraInsight = result.find(r => r.includes('APRA'));
+    expect(apraInsight).toBeDefined();
+    expect(apraInsight).toContain('rates rise');
+  });
+
+  it('does not generate APRA insight when stress ratio is below 40%', () => {
+    const summary = makeSummary([
+      {
+        ...base, name: 'Safe', monthlyRepayment: 2800, totalInterest: 400000, totalPaid: 800000,
+        loanTermMonths: 280, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 80,
+        combinedAnnualIncome: 200000, debtToIncome: 2, yearsOfSalaryForInterest: 2,
+        riskRating: 'green', apraStressRatio: 25,
+      },
+    ]);
+    const result = generateInsights(summary, [
+      { name: 'Baseline', config: {} },
+      { name: 'Safe', config: { annualRate: 0.06, termYears: 30 } },
+    ]);
+    const apraInsight = result.find(r => r.includes('APRA'));
+    expect(apraInsight).toBeUndefined();
+  });
+
+  it('generates wealth context insight when scenarios have loan terms', () => {
+    const summary = makeSummary([
+      {
+        ...base, name: 'Scenario A', monthlyRepayment: 3160, totalInterest: 400000, totalPaid: 800000,
+        loanTermMonths: 120, interestSavedVsBaseline: 237722, monthsSavedVsBaseline: 80,
+        apraStressRatio: null,
+      },
+    ]);
+    const result = generateInsights(summary, [
+      { name: 'Baseline', config: { propertyPrice: 600000 } },
+      { name: 'Scenario A', config: { propertyPrice: 600000 } },
+    ]);
+    const wealthInsight = result.find(r => r.includes('Wealth Context'));
+    expect(wealthInsight).toBeDefined();
+    expect(wealthInsight).toContain('property growth');
   });
 });

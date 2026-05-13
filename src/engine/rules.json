@@ -1,0 +1,77 @@
+{
+  "meta": {
+    "financialYear": "2024-25",
+    "source": "ATO, APRA & RBA",
+    "lastUpdated": "2025-05"
+  },
+  "macro": {
+    "rbaInflation5YrAvg": 0.035,
+    "propertyGrowthAssumption": 0.05,
+    "apraBuffer": 0.03
+  },
+  "taxBrackets": [
+    { "min": 0, "max": 18200, "rate": 0 },
+    { "min": 18200, "max": 45000, "rate": 0.16 },
+    { "min": 45000, "max": 120000, "rate": 0.30 },
+    { "min": 120000, "max": 180000, "rate": 0.37 },
+    { "min": 180000, "max": null, "rate": 0.45 }
+  ],
+  "fhss": {
+    "maxContributionPerYear": 15000,
+    "maxTotalReleasable": 50000,
+    "contributionsTaxRate": 0.15,
+    "withdrawalTaxRate": 0.15,
+    "deemedEarningsRate": 0.03
+  },
+  "division293Threshold": 250000,
+  "medianSalary": 95000,
+  "stampDuty": {
+    "NSW": {
+      "baseRate": 0.04,
+      "fhbExemptionCap": 800000,
+      "fhbDiscountCap": 1000000
+    },
+    "VIC": {
+      "baseRate": 0.055,
+      "fhbExemptionCap": 600000,
+      "fhbDiscountCap": 750000
+    },
+    "QLD": {
+      "baseRate": 0.035,
+      "fhbExemptionCap": 500000,
+      "fhbDiscountCap": 700000
+    },
+    "WA": {
+      "baseRate": 0.035,
+      "fhbExemptionCap": 500000,
+      "fhbDiscountCap": 600000
+    },
+    "SA": {
+      "baseRate": 0.04,
+      "fhbExemptionCap": 500000,
+      "fhbDiscountCap": 650000
+    },
+    "TAS": {
+      "baseRate": 0.04,
+      "fhbExemptionCap": 500000,
+      "fhbDiscountCap": 750000
+    },
+    "ACT": {
+      "baseRate": 0.045,
+      "fhbExemptionCap": 500000,
+      "fhbDiscountCap": 750000
+    },
+    "NT": {
+      "baseRate": 0.035,
+      "fhbExemptionCap": 500000,
+      "fhbDiscountCap": 650000
+    }
+  },
+  "lmiBands": [
+    { "maxLvr": 0.80, "rate": 0 },
+    { "maxLvr": 0.85, "rate": 0.01 },
+    { "maxLvr": 0.90, "rate": 0.02 },
+    { "maxLvr": 0.95, "rate": 0.035 },
+    { "maxLvr": 1.00, "rate": 0.05 }
+  ]
+}

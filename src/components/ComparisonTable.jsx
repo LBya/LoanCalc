@@ -219,13 +219,13 @@ function ComparisonTable({ summary, frequency }) {
   const hasIncomeData = summary.some((s) => s.combinedAnnualIncome > 0);
 
   return (
-    <div>
-      <table className="w-full border-collapse text-sm">
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm min-w-[500px]">
         <thead>
           <tr className="border-b-2 border-border">
-            <th className="text-left py-2 px-3 font-medium text-muted-foreground">Metric</th>
+            <th className="text-left py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">Metric</th>
             {summary.map((s) => (
-              <th key={s.name} className="text-right py-2 px-3 font-medium text-card-foreground">{s.name}</th>
+              <th key={s.name} className="text-right py-2 px-3 font-medium text-card-foreground whitespace-nowrap">{s.name}</th>
             ))}
           </tr>
         </thead>

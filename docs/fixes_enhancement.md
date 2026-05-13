@@ -1,17 +1,20 @@
-1. Fixing the Offset Fallacy (The Insights Engine)
-You’ve fallen into the classic mortgage broker trap of conflating cash flow with interest minimisation. To give the user an honest assessment, your insights engine needs to separate the benefits of the offset account from the benefits of forced overpayment.
-The Solution:
-Decouple the Savings: Your code needs to run a shadow calculation in the background. Calculate what the loan would look like if they took out the $696k mortgage, had zero offset, but paid the $4,177 a month anyway.
-The Real Insight: You will find that simply paying $4,177 a month on a $696k loan does most of the heavy lifting. The offset account is just icing on the cake.
-Better Insight Phrasing: Update your JSON output to categorise this properly. Change your insight to something like: "Scenario A enforces a higher minimum repayment of $4,177. This forced cash-flow discipline, combined with your $110k offset, saves $251,593 compared to the Baseline." Don't let the offset steal the credit for the user's hard-earned cash flow.
+Claim: This specific comparison (Large Deposit + DCA Offset vs. Small Deposit + Lump Sum Offset) is actually a useful metric for a borrower.
+The Verdict: Highly Useful / The Crux of Mortgage Strategy.
+Fact-Check: The $1,665 interest difference over a quarter of a century is a rounding error. It’s completely irrelevant. The actual utility of this comparison is that it exposes the brutal trade-off between Cash-Flow Flexibility and Capital Liquidity.
+Scenario A (Large Deposit): The user locks $110k away in the bank's vault (equity). The benefit? Their minimum monthly survival number drops to $3,487. If they lose their job, they can simply stop putting the extra $660 into the offset and survive on a lower baseline. The risk? If the roof caves in tomorrow, they don't have $110k liquid cash to fix it (unless the bank graciously approves a redraw, which they can refuse if you are unemployed).
+Scenario B (Lump Sum Offset): The user keeps $110k perfectly liquid in a bank account. They can buy a car or fix the roof tomorrow without asking the bank's permission. The risk? They have legally bound themselves to a brutal $4,147 monthly baseline. Their cash-flow choke point is significantly tighter.
+Citation: Standard Credit Risk Analysis / Australian Retail Banking / 2026.
+Credibility Score: 10/10. Reasoning: This is the exact conversation a high-end financial adviser has with a client, shifting the focus from 'interest saved' to 'risk mitigation'.
+How to Dynamically Identify This in Your Code
+To trigger this specific insight, your code needs a detection engine that looks for matched capital allocations. You write an if statement that checks the following conditions across two scenarios:
+The Capital Match: (Deposit_A + Offset_A) === (Deposit_B + Offset_B). This confirms both scenarios start with the exact same pool of cash ($300k).
+The Loan Variable Match: Rate_A === Rate_B and Term_A === Term_B.
+The Cash-Flow Match: Absolute_Difference(MonthlyRepayment_B - MonthlyRepayment_A) ≈ OffsetMonthlyGrowth_A. This confirms the user is using the exact cash-flow savings from the lower repayment to fund the offset account.
+If all three conditions are true, your programme triggers the "Structural Liquidity Comparison" insight block instead of the generic vanilla comparison.
+How to Rephrase the Insights (The Copywriting Fix)
+Throw away the "Offset Efficiency" fluff. When your code detects this match, it should output insights that look exactly like this:
+"The Liquidity Trade-Off: Both scenarios use your $300k capital, but differently. Scenario A locks $110k into the house to lower your mandatory repayment to $3,487. Scenario B keeps $110k available in your offset, but forces you into a stricter $4,147 monthly repayment."
+"The Cash-Flow Winner: By choosing Scenario A and diligently saving the $660/mo difference into your offset, you beat the lump-sum offset strategy (Scenario B) by $1,665 in interest, while maintaining a safer, lower minimum repayment."
+"The Risk Assessment: Choose Scenario A if you value cash-flow safety (lower monthly bills). Choose Scenario B if you value ultimate liquidity (having $110k cash instantly accessible for emergencies), but be prepared for the higher monthly minimum."
 
-How to Rebuild Your Calculator to Handle This
-If you want your tool to actually provide value instead of pumping out vanilla bank-brochure numbers, you need to tear out the static tax logic and replace it with a dynamic engine.
-Split the Income Inputs: You cannot ask for a single 'Income' figure. You must ask for salaryAtContribution and salaryAtWithdrawal.
-Calculate the Entry Tax: Flat 15% on concessional contributions, or up to 30% if they trigger Division 293 (earning over $250k).
-Calculate the Extraction Baseline Tax: Run standard ATO tax brackets on their salaryAtWithdrawal alone.
-Calculate the Extraction Combined Tax: Run the ATO tax brackets on (salaryAtWithdrawal + FHSS Assessable Amount).
-Isolate the FHSS Tax: Subtract Step 3 from Step 4. This is the gross tax triggered by the withdrawal.
-Apply the 30% Offset: Subtract 30% of the FHSS Assessable Amount from the result in Step 5. If it drops below zero, floor it at zero.
-
-For this one have an advanced tab for the FHSS otherwise assume median wage in and median wage out to calculate the standard. Also with asking for users salary we can now do some cool insights/ratios/risk weightings compared to the loan/repayments - brainstorm some of these
+Adapt this for our other scenario where repayments are higher. We can do a cashflow comparison where we look at the min repayment + offset + repayment and compare total cashflow differences or where above total are not equal and 1 is lower, we could suggest putting the difference into offset for better return (and can calculate this with an amount over the lifetime of the loan/show the impact)

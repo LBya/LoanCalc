@@ -1,4 +1,5 @@
-import { MEDIAN_SALARY } from './constants';
+import { MEDIAN_SALARY, MACRO } from './constants';
+import { generateAmortization } from './amortization';
 
 /**
  * Aggregate multiple scenario results into comparison data.
@@ -50,27 +51,38 @@ export function buildComparison(scenarios) {
     const decomposition = scenario.shadowDecomposition || null;
     const hasOffsetEffect = (offsetBalance > 0) || (scenario.config?.offsetMonthlyGrowth > 0);
 
-    // Offset efficiency: interest saved per dollar of initial offset.
-    // For static offsets, divide by the initial offset balance.
-    // For growing offsets (no initial balance), divide by total contributed over loan life.
+    // Offset efficiency: interest saved per dollar of total capital deployed into offset.
+    // Total capital = initial lump sum + all growth contributions over the loan life.
+    // This gives an honest blended rate for hybrid offsets (both initial + growth),
+    // and naturally degrades correctly for pure static or pure growing offsets.
     let offsetEfficiency = null;
     let offsetBonus = decomposition?.offsetInterestSaved ?? null;
 
     if (hasOffsetEffect && offsetBonus !== null && offsetBonus > 0) {
-      if (offsetBalance > 0) {
-        // Static offset: efficiency per dollar of initial balance
-        offsetEfficiency = offsetBonus / offsetBalance;
-      } else if (scenario.config?.offsetMonthlyGrowth > 0 && loanTermMonths > 0) {
-        // Growing offset only: efficiency per total dollar contributed
-        const totalContributed = scenario.config.offsetMonthlyGrowth * loanTermMonths;
-        if (totalContributed > 0) {
-          offsetEfficiency = offsetBonus / totalContributed;
-        }
+      const totalCapitalDeployed = offsetBalance
+        + (scenario.config?.offsetMonthlyGrowth || 0) * loanTermMonths;
+      if (totalCapitalDeployed > 0) {
+        offsetEfficiency = offsetBonus / totalCapitalDeployed;
       }
     }
 
     // Risk rating based on DTI and repayment stress
     const riskRating = calculateRiskRating(debtToIncome, repaymentToIncome);
+
+    // APRA serviceability test: can the borrower survive a 3% rate hike?
+    const apraBuffer = MACRO.apraBuffer;
+    let apraStressRatio = null;
+    if (combinedAnnualIncome > 0 && scenario.config?.annualRate) {
+      const bufferedRate = scenario.config.annualRate + apraBuffer;
+      const bufferedAmort = generateAmortization({
+        principal: principalBorrowed,
+        annualRate: bufferedRate,
+        termYears: scenario.config?.termYears || 30,
+      });
+      apraStressRatio = afterTaxMonthly > 0
+        ? (bufferedAmort.monthlyRepayment / afterTaxMonthly) * 100
+        : null;
+    }
 
     // Color ratings for individual affordability metrics
     const debtToIncomeColor = debtToIncome !== null
@@ -106,21 +118,44 @@ export function buildComparison(scenarios) {
       debtToIncomeColor,
       repaymentToIncomeColor,
       yearsOfSalaryColor,
+      // Liquidity & cashflow
+      totalMonthlyOutflow: scenario.result.monthlyRepayment
+        + (scenario.config?.offsetMonthlyGrowth || 0)
+        + (scenario.config?.extraMonthly || 0),
+      lockedEquity: deposit,
+      liquidReserve: offsetBalance,
       // Decomposition
       cashFlowSavings: decomposition?.cashFlowSavings ?? null,
       offsetBonus: offsetBonus,
       cashFlowMonthsSaved: decomposition?.cashFlowMonthsSaved ?? null,
       offsetMonthsSaved: decomposition?.offsetMonthsSaved ?? null,
+      // APRA stress test
+      apraStressRatio,
     };
   });
 
-  const trajectories = scenarios.map((scenario) => ({
-    name: scenario.name,
-    data: scenario.result.schedule.map((entry) => ({
-      month: entry.month,
-      balance: entry.balance,
-    })),
-  }));
+  const growthRate = MACRO.propertyGrowthAssumption;
+  const inflationRate = MACRO.rbaInflation5YrAvg;
+
+  const trajectories = scenarios.map((scenario) => {
+    const propPrice = scenario.config?.propertyPrice || 0;
+
+    return {
+      name: scenario.name,
+      data: scenario.result.schedule.map((entry) => {
+        const years = entry.month / 12;
+        const nominalPropertyValue = propPrice * Math.pow(1 + growthRate, years);
+        const nominalEquity = nominalPropertyValue - entry.balance;
+        const realEquity = nominalEquity / Math.pow(1 + inflationRate, years);
+
+        return {
+          month: entry.month,
+          balance: entry.balance,
+          realEquity: propPrice > 0 ? realEquity : null,
+        };
+      }),
+    };
+  });
 
   // Offset trajectories for scenarios that have offset data
   const offsetTrajectories = scenarios

@@ -187,4 +187,42 @@ describe('buildComparison', () => {
     expect(summary[1].offsetBonus).toBe(50000);
     expect(summary[1].offsetMonthsSaved).toBe(20);
   });
+
+  it('includes APRA stress test ratio when income and rate are provided', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([
+      { name: 'Stress', config: { salaries: [95000], annualRate: 0.06, termYears: 30 }, result },
+    ]);
+
+    expect(summary[0].apraStressRatio).toBeDefined();
+    expect(summary[0].apraStressRatio).toBeGreaterThan(0);
+  });
+
+  it('returns null APRA stress ratio when no income', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { summary } = buildComparison([{ name: 'NoIncome', result }]);
+
+    expect(summary[0].apraStressRatio).toBeNull();
+  });
+
+  it('includes realEquity in trajectory data when propertyPrice is provided', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { trajectories } = buildComparison([
+      { name: 'WithProp', config: { propertyPrice: 600000 }, result },
+    ]);
+
+    expect(trajectories[0].data[0].realEquity).toBeDefined();
+    expect(trajectories[0].data[0].realEquity).not.toBeNull();
+    // Month 1: equity should be negative (owe more than property value minus interest)
+    // but by end should be positive
+    const lastPoint = trajectories[0].data[trajectories[0].data.length - 1];
+    expect(lastPoint.realEquity).toBeGreaterThan(0);
+  });
+
+  it('returns null realEquity when no propertyPrice', () => {
+    const result = generateAmortization({ principal: 500000, annualRate: 0.06, termYears: 30 });
+    const { trajectories } = buildComparison([{ name: 'NoProp', result }]);
+
+    expect(trajectories[0].data[0].realEquity).toBeNull();
+  });
 });
