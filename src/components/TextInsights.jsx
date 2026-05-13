@@ -1,15 +1,15 @@
 function TextInsights({ insights }) {
   if (!insights || insights.length === 0) {
     return (
-      <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
+      <div className="bg-card rounded-lg border border-border p-3 sm:p-4 shadow-sm">
         <h2 className="text-lg font-semibold mb-2 text-card-foreground">Key Insights</h2>
-        <p className="text-muted-foreground">Add scenarios with different settings to see comparison insights.</p>
+        <p className="text-sm text-muted-foreground">Add scenarios with different settings to see comparison insights.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
+    <div className="bg-card rounded-lg border border-border p-3 sm:p-4 shadow-sm">
       <h2 className="text-lg font-semibold mb-3 text-card-foreground">Key Insights</h2>
       <ul className="list-none p-0">
         {insights.map((insight, index) => {
@@ -24,7 +24,7 @@ function TextInsights({ insights }) {
           return (
             <li
               key={index}
-              className={`py-2 px-3 border-l-4 ${borderClass} mb-2 bg-muted text-card-foreground rounded-r-md text-sm`}
+              className={`py-1.5 px-2.5 sm:py-2 sm:px-3 border-l-4 ${borderClass} mb-2 bg-muted text-card-foreground rounded-r-md text-xs sm:text-sm`}
             >
               {insight}
             </li>
